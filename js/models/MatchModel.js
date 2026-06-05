@@ -252,11 +252,25 @@ const MatchModel = (() => {
     return rebuildLineupFromSubs(matchId);
   }
 
+  function swapLineupPlayers(matchId, posIndexA, posIndexB, minute) {
+    const matches = _load();
+    const match = matches.find(m => m.id === matchId);
+    if (!match?.lineup) return null;
+    const slotA = match.lineup.find(l => l.positionIndex === posIndexA && l.startMinute <= minute && l.endMinute > minute);
+    const slotB = match.lineup.find(l => l.positionIndex === posIndexB && l.startMinute <= minute && l.endMinute > minute);
+    if (!slotA || !slotB) return null;
+    const tmp = slotA.playerId;
+    slotA.playerId = slotB.playerId;
+    slotB.playerId = tmp;
+    _save(matches);
+    return getById(matchId);
+  }
+
   function clearPositionOverrides(matchId) {
     const matches = _load();
     const match = matches.find(m => m.id === matchId);
     if (match) { match.positionOverrides = {}; _save(matches); }
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution, swapLineupPlayers };
 })();

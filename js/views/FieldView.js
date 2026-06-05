@@ -128,7 +128,7 @@ const FieldView = (() => {
   }
 
   // ── FC 26-style player pin ─────────────────────────────────────────────
-  function _playerPin(pos, index) {
+  function _playerPin(pos, index, selected = false) {
     const R   = 20;
     const col = _posColor(pos.positionCode);
 
@@ -137,8 +137,8 @@ const FieldView = (() => {
     const firstName  = parts.length > 1 ? parts[0][0].toUpperCase() + '.' : '';
     const displayName = (firstName + ' ' + lastName).trim().slice(0, 12);
 
-    // Flip label to above circle for bottom-half players to avoid clipping
-    const labelAbove = pos.y > 440;
+    // GK label always goes below (into goal area) to avoid overlapping with defenders above
+    const labelAbove = pos.positionCode !== 'GK' && pos.y > 440;
 
     const g = _el('g', {
       class: 'player-pin-marker',
@@ -146,11 +146,20 @@ const FieldView = (() => {
       transform: `translate(${pos.x},${pos.y})`,
     });
 
+    // Selection ring (shown when player is selected for swapping)
+    if (selected) {
+      g.appendChild(_el('circle', {
+        cx: 0, cy: 0, r: R + 9, fill: 'none',
+        stroke: '#fff', 'stroke-width': 3, 'stroke-dasharray': '6 3',
+        style: 'pointer-events:none',
+      }));
+    }
+
     // Outer glow ring
     g.appendChild(_el('circle', {
       cx: 0, cy: 0, r: R + 5,
-      fill: 'none', stroke: col, 'stroke-width': 2.5,
-      opacity: '.7', style: 'pointer-events:none',
+      fill: 'none', stroke: selected ? '#fff' : col, 'stroke-width': selected ? 3 : 2.5,
+      opacity: selected ? '1' : '.7', style: 'pointer-events:none',
     }));
 
     // Drop shadow
@@ -317,10 +326,11 @@ const FieldView = (() => {
     // Player markers
     positions.forEach((pos, i) => {
       if (options.cardMode) {
-        const pin = _playerPin(pos, i);
+        const selected = options.selectedPosIndex !== undefined && options.selectedPosIndex === pos.positionIndex;
+        const pin = _playerPin(pos, i, selected);
         svgEl.appendChild(pin);
         if (options.draggable && pos.positionIndex !== undefined) {
-          _makeCardDraggable(svgEl, pin, pos, options.onPositionChange);
+          _makeCardDraggable(svgEl, pin, pos, options.onPositionChange, options.onPlayerClick);
         }
       } else {
         svgEl.appendChild(_playerCircle(pos));
@@ -328,18 +338,17 @@ const FieldView = (() => {
     });
   }
 
-  // ── Drag: player pin ───────────────────────────────────────────────────
-  function _makeCardDraggable(svgEl, cardEl, pos, onDrop) {
-    let dragging = false, startX, startY, origX, origY;
+  // ── Drag: player pin (click = minimal movement → onClick; drag → onDrop) ─
+  function _makeCardDraggable(svgEl, cardEl, pos, onDrop, onClick) {
+    let dragging = false, moved = false, startX, startY, origX, origY;
 
     cardEl.addEventListener('pointerdown', e => {
-      dragging = true;
+      dragging = true; moved = false;
       cardEl.setPointerCapture(e.pointerId);
       cardEl.style.cursor = 'grabbing';
       const pt = _svgCoords(svgEl, e);
       startX = pt.x; startY = pt.y;
       origX = pos.x; origY = pos.y;
-      // Bring to front
       svgEl.appendChild(cardEl);
       e.stopPropagation(); e.preventDefault();
     });
@@ -347,6 +356,7 @@ const FieldView = (() => {
     cardEl.addEventListener('pointermove', e => {
       if (!dragging) return;
       const pt = _svgCoords(svgEl, e);
+      if (Math.abs(pt.x - startX) + Math.abs(pt.y - startY) > 6) moved = true;
       const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
       const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
       cardEl.setAttribute('transform', `translate(${nx},${ny})`);
@@ -357,11 +367,16 @@ const FieldView = (() => {
       if (!dragging) return;
       dragging = false;
       cardEl.style.cursor = 'grab';
-      const pt = _svgCoords(svgEl, e);
-      const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
-      const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
-      pos.x = nx; pos.y = ny;
-      if (onDrop) onDrop(pos.positionIndex, nx, ny);
+      if (!moved && onClick) {
+        cardEl.setAttribute('transform', `translate(${origX},${origY})`);
+        onClick(pos.positionIndex);
+      } else if (moved) {
+        const pt = _svgCoords(svgEl, e);
+        const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
+        const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
+        pos.x = nx; pos.y = ny;
+        if (onDrop) onDrop(pos.positionIndex, nx, ny);
+      }
       e.stopPropagation();
     });
   }

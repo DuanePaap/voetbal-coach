@@ -1,6 +1,7 @@
 const LineupController = (() => {
   let _currentMatchId = null;
   let _currentMinute = 0;
+  let _selectedPosIndex = null;
 
   function init() {
     const select = document.getElementById('lineup-match-select');
@@ -40,44 +41,54 @@ const LineupController = (() => {
   function _renderAll() {
     const match = MatchModel.getById(_currentMatchId);
     const players = PlayerModel.getAll();
-    const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
-
     LineupView.renderInfo(match, players);
     LineupView.renderNoSubPicker(match, players);
     LineupView.renderPeriodNav(match);
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
+    _selectedPosIndex = null;
+    _renderField();
+  }
 
+  function _renderField() {
+    const match = MatchModel.getById(_currentMatchId);
+    const players = PlayerModel.getAll();
+    const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
     const svgEl = document.getElementById('lineup-field');
     if (match && formation) {
       const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
       FieldView.render(svgEl, positions, match.fieldType, null, {
         cardMode: true,
         draggable: true,
-        onPositionChange: (posIndex, x, y) => {
-          MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y);
-        },
+        selectedPosIndex: _selectedPosIndex,
+        onPositionChange: (posIndex, x, y) => MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y),
+        onPlayerClick: _onPlayerClick,
       });
     } else {
       FieldView.render(svgEl, [], 'full', null, { cardMode: true });
     }
   }
 
+  function _onPlayerClick(posIndex) {
+    if (_selectedPosIndex === null) {
+      _selectedPosIndex = posIndex;
+      _renderField();
+    } else if (_selectedPosIndex === posIndex) {
+      _selectedPosIndex = null;
+      _renderField();
+    } else {
+      MatchModel.swapLineupPlayers(_currentMatchId, _selectedPosIndex, posIndex, _currentMinute);
+      _selectedPosIndex = null;
+      _renderAll();
+    }
+  }
+
   function showMinute(minute, btn) {
     _currentMinute = minute;
+    _selectedPosIndex = null;
     document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
-
-    const match = MatchModel.getById(_currentMatchId);
-    const players = PlayerModel.getAll();
-    const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
-    if (match && formation) {
-      const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
-      FieldView.render(document.getElementById('lineup-field'), positions, match.fieldType, null, {
-        cardMode: true, draggable: true,
-        onPositionChange: (posIndex, x, y) => { MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y); },
-      });
-    }
+    _renderField();
   }
 
   function toggleNoSub(playerId) {
