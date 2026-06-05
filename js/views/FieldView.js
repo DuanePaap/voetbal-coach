@@ -172,18 +172,29 @@ const FieldView = (() => {
         'stroke-width': 2.5, style: 'pointer-events:none',
       }));
     } else {
-      // No photo: inner highlight + number or initials
-      g.appendChild(_el('circle', { cx: -5, cy: -5, r: 10, fill: 'rgba(255,255,255,.1)', style: 'pointer-events:none' }));
+      // No photo: greyscale avatar silhouette
+      const ag = _el('g', { 'clip-path': `url(#pin-clip-${index})`, style: 'pointer-events:none' });
+      ag.appendChild(_el('rect', { x: -R, y: -R, width: R * 2, height: R * 2, fill: '#16222e' }));
+      ag.appendChild(_el('circle', { cx: 0, cy: -5, r: 6, fill: '#2e4455' }));
+      ag.appendChild(_el('ellipse', { cx: 0, cy: 22, rx: 13, ry: 9, fill: '#263748' }));
+      g.appendChild(ag);
 
-      const label = pos.playerNumber ? `#${pos.playerNumber}` : (pos.playerName ? (pos.playerName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)) : pos.positionCode);
-      const numEl = _el('text', {
-        x: 0, y: 5, 'text-anchor': 'middle',
-        'font-size': pos.playerNumber ? 12 : 9, 'font-weight': '900', fill: '#fff',
-        'font-family': "'Segoe UI',sans-serif", 'letter-spacing': '-0.5',
-        style: 'pointer-events:none',
-      });
-      numEl.textContent = label;
-      g.appendChild(numEl);
+      // Initials (always from name, never position code)
+      const initials = pos.playerName
+        ? pos.playerName.trim().split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+        : '';
+      if (initials) {
+        const initEl = _el('text', {
+          x: 0, y: 5, 'text-anchor': 'middle',
+          'font-size': 10, 'font-weight': '900', fill: 'rgba(160,200,240,.9)',
+          'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none',
+        });
+        initEl.textContent = initials;
+        g.appendChild(initEl);
+      }
+
+      // Position color border ring
+      g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', stroke: col, 'stroke-width': 2.5, style: 'pointer-events:none' }));
     }
 
     // ── Name pill + position badge ──
