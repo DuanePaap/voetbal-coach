@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voetbal Coach</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-brand">⚽ Voetbal Coach</div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-page="spelers">Spelers</button>
+      <button class="nav-btn" data-page="wedstrijden">Wedstrijden</button>
+      <button class="nav-btn" data-page="opstelling">Opstelling</button>
+      <button class="nav-btn" data-page="gameplan">Gameplan</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- SPELERS pagina -->
+    <section id="page-spelers" class="page active">
+      <div class="page-header">
+        <h1>Spelersoverzicht</h1>
+        <button class="btn btn-primary" id="btn-add-player">+ Speler toevoegen</button>
+      </div>
+      <div class="player-grid" id="player-list"></div>
+
+      <!-- Speler modal -->
+      <div class="modal" id="player-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 id="player-modal-title">Speler toevoegen</h2>
+            <button class="modal-close" data-modal="player-modal">&times;</button>
+          </div>
+          <form id="player-form">
+            <input type="hidden" id="player-id">
+            <div class="form-group">
+              <label>Naam</label>
+              <input type="text" id="player-name" required placeholder="Voornaam Achternaam">
+            </div>
+            <div class="form-group">
+              <label>Rugnummer</label>
+              <input type="number" id="player-number" min="1" max="99" placeholder="1–99">
+            </div>
+            <div class="form-group">
+              <label>Voorkeurs posities</label>
+              <div class="position-picker" id="position-picker"></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" data-modal="player-modal">Annuleren</button>
+              <button type="submit" class="btn btn-primary">Opslaan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- WEDSTRIJDEN pagina -->
+    <section id="page-wedstrijden" class="page">
+      <div class="page-header">
+        <h1>Wedstrijden</h1>
+        <button class="btn btn-primary" id="btn-add-match">+ Wedstrijd aanmaken</button>
+      </div>
+      <div class="match-list" id="match-list"></div>
+
+      <!-- Wedstrijd modal -->
+      <div class="modal" id="match-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 id="match-modal-title">Wedstrijd aanmaken</h2>
+            <button class="modal-close" data-modal="match-modal">&times;</button>
+          </div>
+          <form id="match-form">
+            <input type="hidden" id="match-id">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Datum</label>
+                <input type="date" id="match-date" required>
+              </div>
+              <div class="form-group">
+                <label>Tegenstander</label>
+                <input type="text" id="match-opponent" required placeholder="Team naam">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Locatie</label>
+                <select id="match-location">
+                  <option value="thuis">Thuis</option>
+                  <option value="uit">Uit</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Veldtype</label>
+                <select id="match-fieldtype">
+                  <option value="half">Halve veld (8 spelers)</option>
+                  <option value="full">Heel veld (11 spelers)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Opstelling</label>
+              <select id="match-formation"></select>
+            </div>
+            <div class="form-group">
+              <label>Aanwezige spelers</label>
+              <div class="player-checklist" id="match-player-checklist"></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" data-modal="match-modal">Annuleren</button>
+              <button type="submit" class="btn btn-primary">Opslaan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- OPSTELLING pagina -->
+    <section id="page-opstelling" class="page">
+      <div class="page-header">
+        <h1>Opstelling</h1>
+      </div>
+      <div class="lineup-wrapper">
+        <div class="lineup-sidebar">
+          <div class="form-group">
+            <label>Selecteer wedstrijd</label>
+            <select id="lineup-match-select"></select>
+          </div>
+          <div id="lineup-info" class="lineup-info"></div>
+          <div id="substitution-timeline" class="sub-timeline"></div>
+          <div id="bench-list" class="bench-list"></div>
+          <button class="btn btn-primary" id="btn-generate-lineup" style="width:100%;margin-top:12px">
+            ⚙ Genereer opstelling
+          </button>
+          <button class="btn btn-secondary" id="btn-save-lineup" style="width:100%;margin-top:8px">
+            Opstelling opslaan
+          </button>
+        </div>
+        <div class="lineup-field-wrapper">
+          <svg id="lineup-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- GAMEPLAN pagina -->
+    <section id="page-gameplan" class="page">
+      <div class="page-header">
+        <h1>Gameplan</h1>
+      </div>
+      <div class="gameplan-wrapper">
+        <div class="gameplan-sidebar">
+          <div class="form-group">
+            <label>Selecteer wedstrijd</label>
+            <select id="gameplan-match-select"></select>
+          </div>
+          <div class="scenario-controls">
+            <div class="form-group">
+              <label>Balbezit</label>
+              <div class="toggle-group">
+                <button class="toggle-btn active" data-possession="yes">Ja</button>
+                <button class="toggle-btn" data-possession="no">Nee</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Bal positie</label>
+              <div class="ball-zone-grid" id="ball-zone-grid">
+                <button class="zone-btn" data-zone="links-achter">L-A</button>
+                <button class="zone-btn active" data-zone="midden-achter">M-A</button>
+                <button class="zone-btn" data-zone="rechts-achter">R-A</button>
+                <button class="zone-btn" data-zone="links-midden">L-M</button>
+                <button class="zone-btn" data-zone="midden-midden">M-M</button>
+                <button class="zone-btn" data-zone="rechts-midden">R-M</button>
+                <button class="zone-btn" data-zone="links-voor">L-V</button>
+                <button class="zone-btn" data-zone="midden-voor">M-V</button>
+                <button class="zone-btn" data-zone="rechts-voor">R-V</button>
+              </div>
+            </div>
+          </div>
+          <div class="scenario-list" id="scenario-list"></div>
+          <button class="btn btn-primary" id="btn-save-scenario" style="width:100%;margin-top:12px">
+            Scenario opslaan
+          </button>
+        </div>
+        <div class="gameplan-field-wrapper">
+          <svg id="gameplan-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/models/PlayerModel.js"></script>
+  <script src="js/models/MatchModel.js"></script>
+  <script src="js/models/FormationModel.js"></script>
+  <script src="js/models/GamePlanModel.js"></script>
+  <script src="js/views/FieldView.js"></script>
+  <script src="js/views/PlayerView.js"></script>
+  <script src="js/views/MatchView.js"></script>
+  <script src="js/views/LineupView.js"></script>
+  <script src="js/views/GamePlanView.js"></script>
+  <script src="js/controllers/PlayerController.js"></script>
+  <script src="js/controllers/MatchController.js"></script>
+  <script src="js/controllers/LineupController.js"></script>
+  <script src="js/controllers/GamePlanController.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
