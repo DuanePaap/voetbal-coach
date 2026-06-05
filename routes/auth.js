@@ -49,4 +49,26 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.post('/player-login', (req, res) => {
+  const { code } = req.body;
+  if (!code?.trim()) return res.status(400).json({ error: 'Voer een logincode in' });
+
+  const row = db.prepare(`
+    SELECT plc.player_id, plc.coach_id, p.name AS player_name, p.photo AS player_photo
+    FROM player_login_codes plc
+    JOIN players p ON p.id = plc.player_id
+    WHERE plc.code = ?
+  `).get(code.toUpperCase().trim());
+
+  if (!row) return res.status(401).json({ error: 'Ongeldige logincode' });
+
+  const jwt = require('jsonwebtoken');
+  const token = jwt.sign(
+    { type: 'player', id: row.player_id, coachId: row.coach_id, name: row.player_name },
+    JWT_SECRET,
+    { expiresIn: '365d' }
+  );
+  res.json({ token, player: { id: row.player_id, name: row.player_name, photo: row.player_photo, coachId: row.coach_id } });
+});
+
 module.exports = router;

@@ -532,3 +532,98 @@ select option { background: var(--bg-card); }
   color: var(--text);
   border-color: var(--border-light);
 }
+
+/* ===== CODES MODAL ===== */
+.code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.code-row:last-child { border-bottom: none; }
+
+.code-player-name {
+  font-weight: 500;
+  color: var(--text);
+  min-width: 120px;
+}
+
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.code-badge {
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 4px 10px;
+  user-select: all;
+}
+
+.code-none {
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: .78rem;
+}
+
+.btn-danger {
+  background: rgba(239,68,68,.15);
+  border: 1px solid rgba(239,68,68,.4);
+  color: var(--red);
+}
+.btn-danger:hover {
+  background: rgba(239,68,68,.25);
+}
+
+/* ===== PLAYER APP ===== */
+.player-page { display: none; }
+.player-page.active { display: block; }
+
+.player-match-bar {
+  padding: 12px 20px 0;
+  max-width: 360px;
+}
+
+.bench-subs-header {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  margin: 12px 0 6px;
+}
+
+.bench-sub-row {
+  font-size: .85rem;
+  color: var(--text);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bench-sub-row:last-child { border-bottom: none; }
+
+.sub-min {
+  display: inline-block;
+  min-width: 28px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.no-scenarios {
+  font-size: .85rem;
+  color: var(--text-muted);
+  padding: 12px 0;
+}

@@ -11,6 +11,8 @@ app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/players',  authMiddleware, require('./routes/players'));
 app.use('/api/matches',  authMiddleware, require('./routes/matches'));
 app.use('/api/gameplans', authMiddleware, require('./routes/gameplans'));
+app.use('/api/codes',    authMiddleware, require('./routes/codes'));
+app.use('/api/player',   require('./routes/player'));
 
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {

@@ -30,6 +30,23 @@
           <button type="submit" class="btn btn-primary auth-submit">Inloggen</button>
         </form>
         <p class="auth-switch">Nog geen account? <button class="auth-link" id="show-register">Registreren</button></p>
+        <p class="auth-switch">Speler? <button class="auth-link" id="show-player-login">Inloggen met code</button></p>
+      </div>
+
+      <!-- Player login panel -->
+      <div id="auth-player-login" style="display:none">
+        <h2 class="auth-title">Speler inloggen</h2>
+        <form id="form-player-login">
+          <div class="form-group">
+            <label>Logincode</label>
+            <input type="text" id="player-code" required placeholder="bijv. ABCD1234"
+              autocomplete="off" style="text-transform:uppercase;letter-spacing:.12em;font-size:1.2rem;text-align:center"
+              maxlength="8" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <p id="player-login-error" class="auth-error"></p>
+          <button type="submit" class="btn btn-primary auth-submit">Inloggen</button>
+        </form>
+        <p class="auth-switch"><button class="auth-link" id="show-coach-login">&#x2190; Terug naar coach login</button></p>
       </div>
 
       <!-- Register panel -->
@@ -81,9 +98,27 @@
     <section id="page-spelers" class="page active">
       <div class="page-header">
         <h1>Spelersoverzicht</h1>
-        <button class="btn btn-primary" id="btn-add-player">+ Speler toevoegen</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="CodesController.open()">&#x1F511; Logincodes</button>
+          <button class="btn btn-primary" id="btn-add-player">+ Speler toevoegen</button>
+        </div>
       </div>
       <div class="player-grid" id="player-list"></div>
+
+      <!-- Logincodes modal -->
+      <div class="modal" id="codes-modal">
+        <div class="modal-backdrop" onclick="CodesController.close()"></div>
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2>Speler logincodes</h2>
+            <button class="modal-close" onclick="CodesController.close()">&times;</button>
+          </div>
+          <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:16px">
+            Genereer een logincode per speler en deel deze met hen. Spelers kunnen inloggen via het loginscherm.
+          </p>
+          <div id="codes-list"></div>
+        </div>
+      </div>
 
       <!-- Speler modal -->
       <div class="modal" id="player-modal">
@@ -269,6 +304,58 @@
 
   </div><!-- /app-root -->
 
+  <!-- PLAYER APP (shown when logged in as player) -->
+  <div id="player-app" style="display:none">
+
+    <nav class="navbar">
+      <div class="nav-brand">COACH</div>
+      <div class="nav-links">
+        <button class="nav-btn active" data-player-page="opstelling">Opstelling</button>
+        <button class="nav-btn" data-player-page="gameplan">Gameplan</button>
+      </div>
+      <div class="nav-user">
+        <span id="player-name-display" class="coach-name"></span>
+        <button class="btn-logout" id="btn-player-logout" title="Uitloggen">&#x21A9;</button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+
+      <div class="player-match-bar">
+        <div class="form-group">
+          <label>Selecteer wedstrijd</label>
+          <select id="player-match-select"></select>
+        </div>
+      </div>
+
+      <!-- Opstelling -->
+      <section id="player-page-opstelling" class="player-page active">
+        <div class="lineup-wrapper">
+          <div class="lineup-sidebar">
+            <div id="player-period-nav" class="period-nav"></div>
+            <div id="player-bench" class="bench-list"></div>
+          </div>
+          <div class="lineup-field-wrapper">
+            <svg id="player-lineup-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gameplan -->
+      <section id="player-page-gameplan" class="player-page">
+        <div class="gameplan-wrapper">
+          <div class="gameplan-sidebar">
+            <div class="scenario-list" id="player-scenario-list"></div>
+          </div>
+          <div class="gameplan-field-wrapper">
+            <svg id="player-gameplan-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /player-app -->
+
   <!-- Scripts -->
   <script src="js/api.js"></script>
   <script src="js/models/AuthModel.js"></script>
@@ -285,6 +372,8 @@
   <script src="js/controllers/MatchController.js"></script>
   <script src="js/controllers/LineupController.js"></script>
   <script src="js/controllers/GamePlanController.js"></script>
+  <script src="js/controllers/CodesController.js"></script>
+  <script src="js/controllers/PlayerAppController.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
