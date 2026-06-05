@@ -78,7 +78,9 @@ const MatchModel = (() => {
       for (const grp of grps) {
         if (grp.includes(posCode) && [...all].some(p => grp.includes(p))) return 1;
       }
-      return 0;
+      // Player has defined preferences but this position is outside their groups → penalise
+      if (all.size > 0) return -5;
+      return 0; // No preferences at all → last-resort flexible fill
     }
 
     // Greedy assignment: most-restricted positions first (fewest qualified players), GK always first
