@@ -9,6 +9,56 @@
 </head>
 <body>
 
+  <!-- AUTH OVERLAY (shown when not logged in) -->
+  <div id="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">COACH</div>
+
+      <!-- Login panel -->
+      <div id="auth-login">
+        <h2 class="auth-title">Inloggen</h2>
+        <form id="form-login">
+          <div class="form-group">
+            <label>E-mailadres</label>
+            <input type="email" id="login-email" required placeholder="coach@club.nl" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label>Wachtwoord</label>
+            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <p id="login-error" class="auth-error"></p>
+          <button type="submit" class="btn btn-primary auth-submit">Inloggen</button>
+        </form>
+        <p class="auth-switch">Nog geen account? <button class="auth-link" id="show-register">Registreren</button></p>
+      </div>
+
+      <!-- Register panel -->
+      <div id="auth-register" style="display:none">
+        <h2 class="auth-title">Account aanmaken</h2>
+        <form id="form-register">
+          <div class="form-group">
+            <label>Naam</label>
+            <input type="text" id="reg-name" required placeholder="Jan de Vries" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label>E-mailadres</label>
+            <input type="email" id="reg-email" required placeholder="coach@club.nl" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label>Wachtwoord <small style="color:var(--text-muted);font-weight:400">(minimaal 6 tekens)</small></label>
+            <input type="password" id="reg-password" required placeholder="••••••••" minlength="6" autocomplete="new-password">
+          </div>
+          <p id="register-error" class="auth-error"></p>
+          <button type="submit" class="btn btn-primary auth-submit">Account aanmaken</button>
+        </form>
+        <p class="auth-switch">Al een account? <button class="auth-link" id="show-login">Inloggen</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP ROOT (shown when logged in) -->
+  <div id="app-root" style="display:none">
+
   <!-- NAV -->
   <nav class="navbar">
     <div class="nav-brand">COACH</div>
@@ -17,6 +67,10 @@
       <button class="nav-btn" data-page="wedstrijden">Wedstrijden</button>
       <button class="nav-btn" data-page="opstelling">Opstelling</button>
       <button class="nav-btn" data-page="gameplan">Gameplan</button>
+    </div>
+    <div class="nav-user">
+      <span id="coach-name" class="coach-name"></span>
+      <button class="btn-logout" id="btn-logout" title="Uitloggen">↩</button>
     </div>
   </nav>
 
@@ -213,7 +267,11 @@
 
   </main>
 
+  </div><!-- /app-root -->
+
   <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/models/AuthModel.js"></script>
   <script src="js/models/PlayerModel.js"></script>
   <script src="js/models/MatchModel.js"></script>
   <script src="js/models/FormationModel.js"></script>

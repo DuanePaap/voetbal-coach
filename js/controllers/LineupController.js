@@ -3,56 +3,59 @@ const LineupController = (() => {
   let _currentMinute = 0;
   let _selectedPosIndex = null;
 
-  function init() {
+  async function init() {
     const select = document.getElementById('lineup-match-select');
     select.addEventListener('change', () => _loadMatch(select.value));
     document.getElementById('btn-generate-lineup').addEventListener('click', _generateLineup);
 
-    // Inject reset-positions button next to generate button
     const genBtn = document.getElementById('btn-generate-lineup');
     const resetBtn = document.createElement('button');
     resetBtn.className = 'btn btn-secondary';
     resetBtn.style.cssText = 'width:100%;margin-top:6px;font-size:.8rem';
     resetBtn.textContent = '↺ Posities resetten';
-    resetBtn.addEventListener('click', () => {
+    resetBtn.addEventListener('click', async () => {
       if (!_currentMatchId) return;
-      MatchModel.clearPositionOverrides(_currentMatchId);
+      await MatchModel.clearPositionOverrides(_currentMatchId);
       _renderAll();
     });
     genBtn.insertAdjacentElement('afterend', resetBtn);
 
-    _refreshMatchSelect();
+    await _refreshMatchSelect();
   }
 
-  function _refreshMatchSelect() {
-    const matches = MatchModel.getAll();
+  async function _refreshMatchSelect() {
+    const matches = await MatchModel.getAll();
     LineupView.populateMatchSelect(matches);
     const select = document.getElementById('lineup-match-select');
-    if (select.value) _loadMatch(select.value);
-    else if (matches.length) { select.value = matches[0].id; _loadMatch(matches[0].id); }
+    if (select.value) await _loadMatch(select.value);
+    else if (matches.length) { select.value = matches[0].id; await _loadMatch(matches[0].id); }
   }
 
-  function _loadMatch(matchId) {
+  async function _loadMatch(matchId) {
     _currentMatchId = matchId;
     _currentMinute = 0;
-    _renderAll();
+    await _renderAll();
   }
 
-  function _renderAll() {
-    const match = MatchModel.getById(_currentMatchId);
-    const players = PlayerModel.getAll();
+  async function _renderAll() {
+    const [match, players] = await Promise.all([
+      MatchModel.getById(_currentMatchId),
+      PlayerModel.getAll(),
+    ]);
     LineupView.renderInfo(match, players);
     LineupView.renderNoSubPicker(match, players);
     LineupView.renderPeriodNav(match);
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
     _selectedPosIndex = null;
-    _renderField();
+    await _renderField();
   }
 
-  function _renderField() {
-    const match = MatchModel.getById(_currentMatchId);
-    const players = PlayerModel.getAll();
+  async function _renderField() {
+    const [match, players] = await Promise.all([
+      MatchModel.getById(_currentMatchId),
+      PlayerModel.getAll(),
+    ]);
     const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
     const svgEl = document.getElementById('lineup-field');
     if (match && formation) {
@@ -77,9 +80,11 @@ const LineupController = (() => {
       _selectedPosIndex = null;
       _renderField();
     } else {
-      MatchModel.swapLineupPlayers(_currentMatchId, _selectedPosIndex, posIndex, _currentMinute);
+      const prev = _selectedPosIndex;
       _selectedPosIndex = null;
-      _renderAll();
+      MatchModel.swapLineupPlayers(_currentMatchId, prev, posIndex, _currentMinute)
+        .then(() => _renderAll())
+        .catch(console.error);
     }
   }
 
@@ -91,16 +96,15 @@ const LineupController = (() => {
     _renderField();
   }
 
-  function toggleNoSub(playerId) {
+  async function toggleNoSub(playerId) {
     if (!_currentMatchId) return;
-    MatchModel.toggleNoSub(_currentMatchId, playerId);
-    const match = MatchModel.getById(_currentMatchId);
-    const players = PlayerModel.getAll();
+    const match = await MatchModel.toggleNoSub(_currentMatchId, playerId);
+    const players = await PlayerModel.getAll();
     LineupView.renderNoSubPicker(match, players);
   }
 
-  function editSub(subIdx) {
-    const match = MatchModel.getById(_currentMatchId);
+  async function editSub(subIdx) {
+    const match = await MatchModel.getById(_currentMatchId);
     const sub = match?.substitutions?.[subIdx];
     if (!sub) return;
     const row = document.getElementById(`sub-row-${subIdx}`);
@@ -113,34 +117,28 @@ const LineupController = (() => {
     if (inSel)  inSel.value  = sub.playerIn;
   }
 
-  function saveSub(subIdx) {
+  async function saveSub(subIdx) {
     const playerOut = document.getElementById(`sub-out-${subIdx}`)?.value;
     const playerIn  = document.getElementById(`sub-in-${subIdx}`)?.value;
     if (!playerOut || !playerIn) return;
     if (playerOut === playerIn) return alert('Kies twee verschillende spelers.');
-    MatchModel.overrideSubstitution(_currentMatchId, subIdx, playerOut, playerIn);
-    _renderAll();
+    await MatchModel.overrideSubstitution(_currentMatchId, subIdx, playerOut, playerIn);
+    await _renderAll();
   }
 
-  function cancelSub() {
-    _renderAll();
-  }
+  function cancelSub() { _renderAll(); }
 
-  function _generateLineup() {
+  async function _generateLineup() {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
-    const match = MatchModel.getById(_currentMatchId);
-    const players = PlayerModel.getAll();
+    const [match, players] = await Promise.all([MatchModel.getById(_currentMatchId), PlayerModel.getAll()]);
     const result = MatchModel.generateLineup(match, players);
     if (!result) return alert('Niet genoeg spelers voor de opstelling. Voeg meer aanwezige spelers toe.');
-
-    MatchModel.saveLineup(_currentMatchId, result.lineup, result.substitutions);
+    await MatchModel.saveLineup(_currentMatchId, result.lineup, result.substitutions);
     _currentMinute = 0;
-    _renderAll();
+    await _renderAll();
   }
 
-  function refresh() {
-    _refreshMatchSelect();
-  }
+  async function refresh() { await _refreshMatchSelect(); }
 
   return { init, refresh, showMinute, toggleNoSub, editSub, saveSub, cancelSub };
 })();

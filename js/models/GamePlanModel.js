@@ -1,55 +1,33 @@
 const GamePlanModel = (() => {
-  const STORAGE_KEY = 'vc_gameplans';
-
-  function _load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
-    catch { return {}; }
+  async function getForMatch(matchId) {
+    return API.get(`/api/gameplans/${matchId}`);
   }
 
-  function _save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  async function listScenarios(matchId) {
+    const gp = await getForMatch(matchId);
+    return gp.scenarios || [];
   }
 
-  function getForMatch(matchId) {
-    const all = _load();
-    const gp = all[matchId] || { matchId, scenarios: [] };
-    // Migrate old key-value format to array format
-    if (gp.scenarios && !Array.isArray(gp.scenarios)) {
-      gp.scenarios = Object.keys(gp.scenarios).map(key => {
-        const [possession, ...zoneParts] = key.split('_');
-        return { possession, zone: zoneParts.join('_'), ballPos: null, description: '', positions: gp.scenarios[key] };
-      });
-    }
-    return gp;
-  }
-
-  // Adds new or replaces existing scenario with same possession+zone
-  function saveScenario(matchId, possession, zone, ballPos, positions, description) {
-    const all = _load();
-    const gp = getForMatch(matchId);
-    const idx = gp.scenarios.findIndex(s => s.possession === possession && s.zone === zone);
+  async function saveScenario(matchId, possession, zone, ballPos, positions, description) {
+    const gp = await getForMatch(matchId);
+    const scenarios = [...(gp.scenarios || [])];
+    const idx = scenarios.findIndex(s => s.possession === possession && s.zone === zone);
     const scenario = { possession, zone, ballPos, positions, description: description || '' };
-    if (idx !== -1) gp.scenarios[idx] = scenario;
-    else gp.scenarios.push(scenario);
-    all[matchId] = gp;
-    _save(all);
+    if (idx !== -1) scenarios[idx] = scenario; else scenarios.push(scenario);
+    return API.put(`/api/gameplans/${matchId}`, { scenarios });
   }
 
-  function getScenario(matchId, possession, zone) {
-    return getForMatch(matchId).scenarios.find(s => s.possession === possession && s.zone === zone) || null;
+  async function getScenario(matchId, possession, zone) {
+    const gp = await getForMatch(matchId);
+    return (gp.scenarios || []).find(s => s.possession === possession && s.zone === zone) || null;
   }
 
-  function listScenarios(matchId) {
-    return getForMatch(matchId).scenarios;
-  }
-
-  function deleteScenario(matchId, idx) {
-    const all = _load();
-    const gp = getForMatch(matchId);
-    if (idx < 0 || idx >= gp.scenarios.length) return;
-    gp.scenarios.splice(idx, 1);
-    all[matchId] = gp;
-    _save(all);
+  async function deleteScenario(matchId, idx) {
+    const gp = await getForMatch(matchId);
+    const scenarios = [...(gp.scenarios || [])];
+    if (idx < 0 || idx >= scenarios.length) return;
+    scenarios.splice(idx, 1);
+    return API.put(`/api/gameplans/${matchId}`, { scenarios });
   }
 
   return { getForMatch, saveScenario, getScenario, listScenarios, deleteScenario };

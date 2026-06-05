@@ -1,36 +1,38 @@
 const MatchController = (() => {
-  function init() {
-    document.getElementById('btn-add-match').addEventListener('click', () => {
-      MatchView.openModal(null, PlayerModel.getAll());
+  async function init() {
+    document.getElementById('btn-add-match').addEventListener('click', async () => {
+      MatchView.openModal(null, await PlayerModel.getAll());
     });
     document.getElementById('match-form').addEventListener('submit', _onSave);
     document.querySelector('#match-modal .modal-close').addEventListener('click', MatchView.closeModal);
     document.querySelector('#match-modal .modal-backdrop').addEventListener('click', MatchView.closeModal);
     document.querySelector('#match-modal [data-modal="match-modal"]').addEventListener('click', MatchView.closeModal);
-    refresh();
+    await refresh();
   }
 
-  function refresh() {
-    MatchView.renderList(MatchModel.getAll(), PlayerModel.getAll());
+  async function refresh() {
+    const [matches, players] = await Promise.all([MatchModel.getAll(), PlayerModel.getAll()]);
+    MatchView.renderList(matches, players);
   }
 
-  function edit(id) {
-    MatchView.openModal(MatchModel.getById(id), PlayerModel.getAll());
+  async function edit(id) {
+    const [match, players] = await Promise.all([MatchModel.getById(id), PlayerModel.getAll()]);
+    MatchView.openModal(match, players);
   }
 
-  function remove(id) {
+  async function remove(id) {
     if (!confirm('Wedstrijd verwijderen?')) return;
-    MatchModel.remove(id);
-    refresh();
+    await MatchModel.remove(id);
+    await refresh();
   }
 
-  function _onSave(e) {
+  async function _onSave(e) {
     e.preventDefault();
     const data = MatchView.getFormData();
     if (!data.opponent || !data.date) return;
-    MatchModel.save(data);
+    await MatchModel.save(data);
     MatchView.closeModal();
-    refresh();
+    await refresh();
   }
 
   return { init, refresh, edit, remove };

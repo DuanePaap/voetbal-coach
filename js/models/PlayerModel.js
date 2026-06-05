@@ -1,6 +1,4 @@
 const PlayerModel = (() => {
-  const STORAGE_KEY = 'vc_players';
-
   const ALL_POSITIONS = [
     { code: 'GK',  label: 'Keeper' },
     { code: 'LB',  label: 'Links Back' },
@@ -16,34 +14,10 @@ const PlayerModel = (() => {
     { code: 'CDM', label: 'Def. Midden' },
   ];
 
-  function _load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { return []; }
-  }
-
-  function _save(players) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
-  }
-
-  function getAll() { return _load(); }
-
-  function getById(id) { return _load().find(p => p.id === id) || null; }
-
-  function save(data) {
-    const players = _load();
-    if (data.id) {
-      const idx = players.findIndex(p => p.id === data.id);
-      if (idx !== -1) players[idx] = { ...players[idx], ...data };
-      else players.push(data);
-    } else {
-      players.push({ ...data, id: crypto.randomUUID() });
-    }
-    _save(players);
-  }
-
-  function remove(id) {
-    _save(_load().filter(p => p.id !== id));
-  }
+  async function getAll()    { return API.get('/api/players'); }
+  async function getById(id) { return API.get(`/api/players/${id}`); }
+  async function save(data)  { return data.id ? API.put(`/api/players/${data.id}`, data) : API.post('/api/players', data); }
+  async function remove(id)  { return API.delete(`/api/players/${id}`); }
 
   return { getAll, getById, save, remove, ALL_POSITIONS };
 })();
