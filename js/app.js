@@ -30,14 +30,21 @@
     document.getElementById('app-root').style.display = '';
     document.getElementById('player-app').style.display = 'none';
     const coach = AuthModel.getUser();
-    const el = document.getElementById('coach-name');
-    if (el && coach) el.textContent = coach.name;
+    const nameEl = document.getElementById('coach-name');
+    const avatarEl = document.getElementById('coach-avatar');
+    if (nameEl && coach) nameEl.textContent = coach.name;
+    if (avatarEl && coach?.name) avatarEl.textContent = coach.name.charAt(0).toUpperCase();
   }
 
   function _showPlayerApp() {
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('app-root').style.display = 'none';
     document.getElementById('player-app').style.display = '';
+    const player = AuthModel.getUser();
+    const nameEl = document.getElementById('player-name-display');
+    const avatarEl = document.getElementById('player-avatar');
+    if (nameEl && player) nameEl.textContent = player.name;
+    if (avatarEl && player?.name) avatarEl.textContent = player.name.charAt(0).toUpperCase();
   }
 
   function _bindAuthForms() {

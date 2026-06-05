@@ -1,25 +1,18 @@
 const PlayerView = (() => {
-  // Track main position state while the form is open
   let _mainPos = null;
   let _selectedPos = [];
 
   // ── Helpers ───────────────────────────────────────────────────────────
-  function _posColor(code) {
-    if (code === 'GK')                       return '#f59e0b';
-    if (['CB','LB','RB'].includes(code))     return '#3b82f6';
-    if (['CDM'].includes(code))              return '#06b6d4';
-    if (['CM','LM','RM'].includes(code))     return '#10b981';
-    if (['CAM'].includes(code))              return '#a855f7';
-    if (['LW','RW','ST'].includes(code))     return '#ef4444';
-    return '#64748b';
+  function _posClass(code) {
+    if (code === 'GK')                       return 'pos-gk';
+    if (['CB','LB','RB'].includes(code))     return 'pos-def';
+    if (code === 'CDM')                      return 'pos-cdm';
+    if (['CM','LM','RM'].includes(code))     return 'pos-mid';
+    if (code === 'CAM')                      return 'pos-cam';
+    if (['LW','RW','ST'].includes(code))     return 'pos-att';
+    return 'pos-mid';
   }
 
-  function _tier(positions) {
-    const n = (positions || []).length;
-    return n >= 3 ? 'gold' : n >= 1 ? 'silver' : 'bronze';
-  }
-
-  // Resize image to max 240px and compress as JPEG
   function _resizePhoto(dataUrl, cb) {
     const img = new Image();
     img.onload = () => {
@@ -34,53 +27,165 @@ const PlayerView = (() => {
     img.src = dataUrl;
   }
 
-  // ── renderList ────────────────────────────────────────────────────────
-  function renderList(players) {
-    const container = document.getElementById('player-list');
-    if (!players.length) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><p>Nog geen spelers toegevoegd.<br>Klik op "+ Speler toevoegen" om te beginnen.</p></div>`;
-      return;
-    }
-    container.innerHTML = players.map(p => _buildCard(p)).join('');
+  // ── Stats ─────────────────────────────────────────────────────────────
+  function _renderStats(players, codes) {
+    const el = document.getElementById('player-stats');
+    if (!el) return;
+    const total      = players.length;
+    const withPos    = players.filter(p => (p.preferredPositions || []).length > 0).length;
+    const withCode   = (codes || []).length;
+    const inactive   = total - withPos;
+    el.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-card-value">${total}</div>
+        <div class="stat-card-label">Totaal</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-card-value">${withPos}</div>
+        <div class="stat-card-label">Actief</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-card-value">${withCode}</div>
+        <div class="stat-card-label">Met login code</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-card-value">${inactive}</div>
+        <div class="stat-card-label">Inactief</div>
+      </div>`;
   }
 
-  function _buildCard(p) {
-    const tier     = _tier(p.preferredPositions);
-    const mainPos  = p.mainPosition || (p.preferredPositions || [])[0] || '–';
-    const lastName = p.name.split(' ').slice(-1)[0].toUpperCase();
-    const number   = p.number ? `#${p.number}` : '–';
+  // ── renderList ────────────────────────────────────────────────────────
+  function renderList(players, codes) {
+    _renderStats(players, codes || []);
 
-    // Position badges — highlight main
-    const posBadges = (p.preferredPositions || []).map(pos => {
-      const isMain = pos === mainPos;
-      const col    = _posColor(pos);
-      const style  = isMain ? `background:${col};color:#fff;border-color:${col}` : '';
-      return `<span class="fifa-pos-badge" style="${style}">${pos}</span>`;
+    const container = document.getElementById('player-list');
+    if (!players.length) {
+      container.innerHTML = `
+        <div class="player-table-wrapper">
+          <div class="empty-state">
+            <div class="empty-icon">&#x26BD;</div>
+            <p>Nog geen spelers toegevoegd.<br>Klik op "+ Speler toevoegen" om te beginnen.</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const codeMap = {};
+    (codes || []).forEach(c => { codeMap[c.playerId] = c; });
+
+    container.innerHTML = `
+      <div class="player-table-wrapper">
+        <table class="player-table">
+          <thead>
+            <tr>
+              <th>Speler</th>
+              <th>Positie</th>
+              <th>Nr.</th>
+              <th>Login code</th>
+              <th>Status</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${players.map(p => _buildRow(p, codeMap[p.id])).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function _buildRow(p, code) {
+    const mainPos  = p.mainPosition || (p.preferredPositions || [])[0] || null;
+    const initials = p.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+    const avatar = p.photo
+      ? `<div class="pt-avatar"><img src="${p.photo}" alt="${p.name}"></div>`
+      : `<div class="pt-avatar">${initials}</div>`;
+
+    const posBadges = (p.preferredPositions || []).slice(0, 3).map(pos =>
+      `<span class="pos-badge-pill ${_posClass(pos)}">${pos}</span>`
+    ).join('');
+
+    const codeHtml = code
+      ? `<span class="table-code-badge">${code.code}</span>`
+      : `<span class="table-no-code">—</span>`;
+
+    const isActive = (p.preferredPositions || []).length > 0;
+    const statusHtml = `<span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">${isActive ? 'Actief' : 'Inactief'}</span>`;
+
+    const safeId = String(p.id).replace(/'/g, "\\'");
+    return `
+      <tr onclick="PlayerController.selectPlayer('${safeId}')">
+        <td>
+          <div class="pt-player-cell">
+            ${avatar}
+            <span class="pt-name">${p.name}</span>
+          </div>
+        </td>
+        <td><div class="pos-badge-table">${posBadges || '<span style="color:var(--text-dim)">—</span>'}</div></td>
+        <td>${p.number ? '#' + p.number : '—'}</td>
+        <td>${codeHtml}</td>
+        <td>${statusHtml}</td>
+        <td>
+          <div class="table-actions">
+            <button class="table-action-btn" onclick="event.stopPropagation();PlayerController.edit('${safeId}')" title="Bewerken">&#x270F;&#xFE0F;</button>
+            <button class="table-action-btn danger" onclick="event.stopPropagation();PlayerController.remove('${safeId}')" title="Verwijderen">&#x1F5D1;</button>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  // ── Detail panel ──────────────────────────────────────────────────────
+  function showDetail(player, code) {
+    const el = document.getElementById('player-detail');
+    if (!el) return;
+
+    // Highlight selected row
+    document.querySelectorAll('.player-table tbody tr').forEach(tr => {
+      tr.classList.toggle('selected', tr.onclick && tr.onclick.toString().includes(`'${player.id}'`));
+    });
+
+    const mainPos  = player.mainPosition || (player.preferredPositions || [])[0] || null;
+    const initials = player.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+    const photoHtml = player.photo
+      ? `<div class="detail-photo-wrap"><img src="${player.photo}" alt="${player.name}"></div>`
+      : `<div class="detail-photo-wrap"><div class="detail-photo-initials">${initials}</div></div>`;
+
+    const posBadges = (player.preferredPositions || []).map(pos => {
+      const star = pos === mainPos ? ' ★' : '';
+      return `<span class="pos-badge-pill ${_posClass(pos)}">${pos}${star}</span>`;
     }).join('');
 
-    // Photo or initials
-    const initials = p.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    const photoContent = p.photo
-      ? `<img src="${p.photo}" alt="${p.name}">`
-      : `<div class="fifa-initials">${initials}</div>`;
+    const safeId  = String(player.id).replace(/'/g, "\\'");
+    const safeCode = code ? String(code.code).replace(/'/g, "\\'") : '';
 
-    return `
-      <div class="fifa-card ${tier}">
-        <div class="fifa-shine"></div>
-        <div class="fifa-top">
-          <div class="fifa-rating">${number}</div>
-          <div class="fifa-main-pos">${mainPos}</div>
+    const codeSection = code
+      ? `<span class="detail-code-value">${code.code}</span>
+         <div class="detail-code-actions">
+           <button class="btn btn-secondary btn-sm" onclick="PlayerController.generateCode('${safeId}')">Vernieuwen</button>
+           <button class="btn btn-danger btn-sm" onclick="PlayerController.revokeCode('${safeCode}')">Verwijderen</button>
+         </div>`
+      : `<span class="detail-code-none">Geen logincode aangemaakt</span>
+         <div class="detail-code-actions">
+           <button class="btn btn-primary btn-sm" onclick="PlayerController.generateCode('${safeId}')">+ Genereer code</button>
+         </div>`;
+
+    el.innerHTML = `
+      ${photoHtml}
+      <div class="detail-body">
+        <div class="detail-name">${player.name}</div>
+        <div class="detail-meta">${player.number ? '#' + player.number : 'Geen rugnummer'}${mainPos ? ' · ' + mainPos : ''}</div>
+        <div class="detail-positions">
+          ${posBadges || '<span style="color:var(--text-muted);font-size:.82rem">Geen positie</span>'}
         </div>
-        <div class="fifa-photo-wrap">${photoContent}</div>
-        <div class="fifa-bottom">
-          <div class="fifa-name">${lastName}</div>
-          <div class="fifa-divider"></div>
-          <div class="fifa-positions">${posBadges || '<span class="fifa-pos-badge">–</span>'}</div>
+        <div class="detail-code-section">
+          <div class="detail-code-label">Logincode</div>
+          ${codeSection}
         </div>
-        <div class="fifa-actions">
-          <button class="fifa-action-btn" onclick="event.stopPropagation();PlayerController.edit('${p.id}')" title="Bewerken">✏️</button>
-          <button class="fifa-action-btn danger" onclick="event.stopPropagation();PlayerController.remove('${p.id}')" title="Verwijderen">🗑</button>
-        </div>
+      </div>
+      <div class="detail-footer">
+        <button class="btn btn-secondary" onclick="PlayerController.edit('${safeId}')">Bewerken</button>
+        <button class="btn btn-danger" onclick="PlayerController.remove('${safeId}')">Verwijderen</button>
       </div>`;
   }
 
@@ -123,7 +228,6 @@ const PlayerView = (() => {
 
   function _bindPhotoUpload() {
     const input = document.getElementById('player-photo-input');
-    // Clone to remove old listeners
     const fresh = input.cloneNode(true);
     input.replaceWith(fresh);
     fresh.addEventListener('change', e => {
@@ -183,14 +287,14 @@ const PlayerView = (() => {
 
   function getFormData() {
     return {
-      id:                document.getElementById('player-id').value || null,
-      name:              document.getElementById('player-name').value.trim(),
-      number:            parseInt(document.getElementById('player-number').value) || null,
-      photo:             document.getElementById('player-photo-data').value || null,
-      mainPosition:      document.getElementById('player-main-position').value || _selectedPos[0] || null,
+      id:                 document.getElementById('player-id').value || null,
+      name:               document.getElementById('player-name').value.trim(),
+      number:             parseInt(document.getElementById('player-number').value) || null,
+      photo:              document.getElementById('player-photo-data').value || null,
+      mainPosition:       document.getElementById('player-main-position').value || _selectedPos[0] || null,
       preferredPositions: [..._selectedPos],
     };
   }
 
-  return { renderList, openModal, closeModal, getFormData };
+  return { renderList, showDetail, openModal, closeModal, getFormData };
 })();
