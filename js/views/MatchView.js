@@ -18,6 +18,7 @@ const MatchView = (() => {
               <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
               <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
               <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
+              <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
             </div>
           </div>
           <div class="match-card-actions">
@@ -38,6 +39,8 @@ const MatchView = (() => {
 
     const fieldTypeEl = document.getElementById('match-fieldtype');
     fieldTypeEl.value = match?.fieldType || 'half';
+
+    document.getElementById('match-periods').value = String(match?.periods || 2);
 
     _renderFormationOptions(match?.fieldType || 'half', match?.formation);
     _renderPlayerChecklist(players, match?.presentPlayers || []);
@@ -81,6 +84,7 @@ const MatchView = (() => {
       fieldType: document.getElementById('match-fieldtype').value,
       formation: document.getElementById('match-formation').value,
       presentPlayers: checked,
+      periods: parseInt(document.getElementById('match-periods').value) || 2,
     };
   }
 
