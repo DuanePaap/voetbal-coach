@@ -58,6 +58,15 @@ db.exec(`
     FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
     FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS player_login_codes (
+    code TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    coach_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
+  );
 `);
 
 module.exports = db;

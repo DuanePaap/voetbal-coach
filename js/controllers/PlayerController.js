@@ -15,7 +15,7 @@ const PlayerController = (() => {
   async function refresh() {
     const [players, codes] = await Promise.all([
       PlayerModel.getAll(),
-      API.get('/api/codes'),
+      API.get('/api/codes').catch(() => []),
     ]);
     _lastPlayers = players;
     _lastCodes   = codes;
