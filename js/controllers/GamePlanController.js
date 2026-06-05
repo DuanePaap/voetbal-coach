@@ -1,35 +1,99 @@
 const GamePlanController = (() => {
   let _currentMatchId = null;
   let _possession = 'yes';
-  let _zone = 'midden-midden';
+  let _zone = 'midden-voor';
+  let _promptPositions = null; // positions after prompt override
+
+  // Dutch football instruction rules
+  const _PROMPT_RULES = [
+    { keys: ['hoge pressing', 'press hoog', 'druk hoog', 'pressing'],
+      apply: pos => pos.map(p => ({ ...p, y: Math.max(30, p.y - 45) })) },
+    { keys: ['laag blok', 'zak in', 'compact spelen', 'compact', 'verdedigend', 'defensief'],
+      apply: pos => pos.map(p => ({ ...p, y: Math.min(560, p.y + 40) })) },
+    { keys: ['breedte spelen', 'breed spelen', 'breedte', 'uitspreiden'],
+      apply: pos => pos.map(p => {
+        if (['LW','LM','LB'].includes(p.positionCode)) return { ...p, x: Math.max(30, p.x - 28) };
+        if (['RW','RM','RB'].includes(p.positionCode)) return { ...p, x: Math.min(370, p.x + 28) };
+        return p;
+      }) },
+    { keys: ['smal spelen', 'smal', 'midden concentreren'],
+      apply: pos => pos.map(p => {
+        if (['LW','LM','LB'].includes(p.positionCode)) return { ...p, x: Math.min(200, p.x + 22) };
+        if (['RW','RM','RB'].includes(p.positionCode)) return { ...p, x: Math.max(200, p.x - 22) };
+        return p;
+      }) },
+    { keys: ['backs hoog', 'backs aanvallend', 'wingbacks hoog', 'vleugels hoog'],
+      apply: pos => pos.map(p => {
+        if (['LB','RB'].includes(p.positionCode)) return { ...p, y: Math.max(30, p.y - 65) };
+        return p;
+      }) },
+    { keys: ['aanvaller sprint', 'spits sprint', 'doorbreken', 'sprint voor'],
+      apply: pos => pos.map(p => {
+        if (['ST','LW','RW'].includes(p.positionCode)) return { ...p, y: Math.max(30, p.y - 55) };
+        return p;
+      }) },
+    { keys: ['keeper voor', 'keeper hoog', 'keeper aanvallend'],
+      apply: pos => pos.map(p =>
+        p.positionCode === 'GK' ? { ...p, y: Math.max(100, p.y - 70) } : p) },
+    { keys: ['keeper terug', 'keeper blijft', 'keeper laag'],
+      apply: pos => pos.map(p =>
+        p.positionCode === 'GK' ? { ...p, y: Math.min(560, p.y + 20) } : p) },
+    { keys: ['driehoek', 'rondo', 'pivot stabiel'],
+      apply: pos => pos.map(p => {
+        if (['CM','CDM'].includes(p.positionCode)) return { ...p, y: Math.min(560, p.y + 25) };
+        if (p.positionCode === 'CAM') return { ...p, y: Math.max(30, p.y - 25) };
+        return p;
+      }) },
+    { keys: ['over links', 'links aanvallen', 'links opbouwen'],
+      apply: pos => pos.map(p => {
+        if (['LW','LM','LB','ST'].includes(p.positionCode)) return { ...p, x: Math.max(30, p.x - 30) };
+        return p;
+      }) },
+    { keys: ['over rechts', 'rechts aanvallen', 'rechts opbouwen'],
+      apply: pos => pos.map(p => {
+        if (['RW','RM','RB','ST'].includes(p.positionCode)) return { ...p, x: Math.min(370, p.x + 30) };
+        return p;
+      }) },
+    { keys: ['middenveld compact', 'middenveld terug'],
+      apply: pos => pos.map(p => {
+        if (['CM','CDM','CAM','LM','RM'].includes(p.positionCode)) return { ...p, y: Math.min(560, p.y + 20) };
+        return p;
+      }) },
+  ];
 
   function init() {
     const select = document.getElementById('gameplan-match-select');
     select.addEventListener('change', () => _loadMatch(select.value));
 
-    // Possession toggle
     document.querySelectorAll('.toggle-btn[data-possession]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.toggle-btn[data-possession]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         _possession = btn.dataset.possession;
+        _promptPositions = null;
         _update();
       });
     });
 
-    // Ball zone
     document.querySelectorAll('.zone-btn[data-zone]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.zone-btn[data-zone]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        _zone = btn.dataset.zone;
+        _setZone(btn.dataset.zone);
+        _promptPositions = null;
         _update();
       });
     });
 
     document.getElementById('btn-save-scenario').addEventListener('click', _saveScenario);
+    document.getElementById('btn-apply-prompt').addEventListener('click', _applyPrompt);
 
     _refreshMatchSelect();
+  }
+
+  function _setZone(zone) {
+    _zone = zone;
+    document.querySelectorAll('.zone-btn[data-zone]').forEach(b => {
+      b.classList.toggle('active', b.dataset.zone === zone);
+    });
   }
 
   function _refreshMatchSelect() {
@@ -45,62 +109,90 @@ const GamePlanController = (() => {
 
   function _loadMatch(matchId) {
     _currentMatchId = matchId;
+    _promptPositions = null;
     _update();
-    const scenarios = GamePlanModel.listScenarios(matchId);
-    GamePlanView.renderScenarioList(scenarios);
+    GamePlanView.renderScenarioList(GamePlanModel.listScenarios(matchId));
   }
 
-  function _update() {
-    if (!_currentMatchId) return;
+  function _getBasePositions() {
     const match = MatchModel.getById(_currentMatchId);
-    if (!match) return;
+    if (!match) return null;
     const players = PlayerModel.getAll();
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
-    if (!formation) return;
+    if (!formation) return null;
 
-    // Check if saved scenario exists
-    const savedPositions = GamePlanModel.getScenario(_currentMatchId, _possession, _zone);
-    let displayPositions;
+    const saved = GamePlanModel.getScenario(_currentMatchId, _possession, _zone);
+    if (saved) return { positions: saved, fieldType: match.fieldType };
 
-    if (savedPositions) {
-      // Use saved positions
-      displayPositions = savedPositions;
-    } else {
-      // Generate animated positions from base formation
-      const base = formation.positions;
-      const adjusted = FormationModel.applyScenario(base, _possession, _zone);
-
-      // Map players to positions from lineup
-      displayPositions = adjusted.map((pos, i) => {
-        const slot = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute === 0);
-        const player = slot ? players.find(p => p.id === slot.playerId) : null;
-        return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name };
-      });
-    }
-
-    FieldView.render(document.getElementById('gameplan-field'), displayPositions, match.fieldType, _zone);
-  }
-
-  function _saveScenario() {
-    if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
-    const match = MatchModel.getById(_currentMatchId);
-    if (!match) return;
-    const formation = FormationModel.getFormation(match.fieldType, match.formation);
-    if (!formation) return;
-
-    const base = formation.positions;
-    const adjusted = FormationModel.applyScenario(base, _possession, _zone);
-    const players = PlayerModel.getAll();
+    const adjusted = FormationModel.applyScenario(formation.positions, _possession, _zone);
     const positions = adjusted.map((pos, i) => {
       const slot = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute === 0);
       const player = slot ? players.find(p => p.id === slot.playerId) : null;
       return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name };
     });
+    return { positions, fieldType: match.fieldType };
+  }
 
+  function _update() {
+    const base = _getBasePositions();
+    if (!base) return;
+    const displayPositions = _promptPositions || base.positions;
+    FieldView.render(
+      document.getElementById('gameplan-field'),
+      displayPositions,
+      base.fieldType,
+      _zone,
+      { draggable: true, onBallDrop: _onBallDrop }
+    );
+  }
+
+  function _onBallDrop(zone) {
+    _setZone(zone);
+    _promptPositions = null;
+    _update();
+  }
+
+  function _applyPrompt() {
+    const text = (document.getElementById('gameplan-prompt').value || '').toLowerCase().trim();
+    if (!text) return;
+
+    const base = _getBasePositions();
+    if (!base) return;
+
+    let positions = [...(_promptPositions || base.positions)];
+    const matched = [];
+
+    for (const rule of _PROMPT_RULES) {
+      if (rule.keys.some(k => text.includes(k))) {
+        positions = rule.apply(positions);
+        matched.push(rule.keys[0]);
+      }
+    }
+
+    if (!matched.length) {
+      GamePlanView.showPromptFeedback('Geen bekende instructie herkend.');
+      return;
+    }
+
+    _promptPositions = positions;
+    GamePlanView.showPromptFeedback('✓ Toegepast: ' + matched.join(', '));
+    FieldView.render(
+      document.getElementById('gameplan-field'),
+      _promptPositions,
+      base.fieldType,
+      _zone,
+      { draggable: true, onBallDrop: _onBallDrop }
+    );
+  }
+
+  function _saveScenario() {
+    if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
+    const base = _getBasePositions();
+    if (!base) return;
+    const positions = _promptPositions || base.positions;
     GamePlanModel.saveScenario(_currentMatchId, _possession, _zone, positions);
-    const scenarios = GamePlanModel.listScenarios(_currentMatchId);
-    GamePlanView.renderScenarioList(scenarios);
-    alert('Scenario opgeslagen!');
+    GamePlanView.renderScenarioList(GamePlanModel.listScenarios(_currentMatchId));
+    GamePlanView.showPromptFeedback('Scenario opgeslagen!');
   }
 
   function refresh() {

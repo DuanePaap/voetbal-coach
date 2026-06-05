@@ -15,11 +15,50 @@ const LineupView = (() => {
     const numPresent = (match.presentPlayers || []).length;
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     const numPositions = formation?.positions?.length || '?';
+    const numSubs = (match.substitutions || []).length;
+    const subBadge = numSubs > 0
+      ? `<span class="sub-count">⇄ ${numSubs} wissel${numSubs !== 1 ? 's' : ''}</span>`
+      : '<span style="color:#aaa;font-size:.75rem">Geen wissels</span>';
     el.innerHTML = `
       <strong>vs ${match.opponent}</strong><br>
       ${new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL')}<br>
-      <span style="color:#666">${numPresent} aanwezig / ${numPositions} veld posities · ${match.fieldType === 'half' ? 'Halve veld' : 'Heel veld'}</span>
+      <span style="color:#666">${numPresent} aanwezig / ${numPositions} posities · ${match.fieldType === 'half' ? 'Halve veld' : 'Heel veld'}</span><br>
+      ${subBadge}
     `;
+  }
+
+  function renderNoSubPicker(match, players) {
+    const el = document.getElementById('no-sub-section');
+    if (!match?.presentPlayers?.length) { el.innerHTML = ''; return; }
+    const noSub = new Set(match.noSubPlayers || []);
+    const present = players.filter(p => (match.presentPlayers || []).includes(p.id));
+    const rows = present.map(p => {
+      const isLocked = noSub.has(p.id);
+      const mainPos = (p.preferredPositions || [])[0] || '–';
+      return `
+        <div class="no-sub-row">
+          <span class="no-sub-name">${p.name.split(' ')[0]}</span>
+          <span class="no-sub-pos">${mainPos}</span>
+          <button class="lock-btn${isLocked ? ' locked' : ''}"
+            onclick="LineupController.toggleNoSub('${p.id}')"
+            title="${isLocked ? 'Wissel toestaan' : 'Geen wissel'}">
+            ${isLocked ? '🔒' : '🔓'}
+          </button>
+        </div>`;
+    }).join('');
+    el.innerHTML = `<h4>Geen wissel</h4>${rows}`;
+  }
+
+  function renderPeriodNav(match) {
+    const el = document.getElementById('period-nav');
+    if (!match?.lineup?.length) { el.innerHTML = ''; return; }
+    const minutes = [0, ...(match.substitutions || []).map(s => s.minute)];
+    const unique = [...new Set(minutes)].sort((a, b) => a - b);
+    const buttons = unique.map((min, i) =>
+      `<button class="period-btn${i === 0 ? ' active' : ''}" data-minute="${min}" onclick="LineupController.showMinute(${min}, this)">
+        ${min === 0 ? 'Start' : min + "'"}
+      </button>`).join('');
+    el.innerHTML = buttons;
   }
 
   function renderSubstitutionTimeline(match, players) {
@@ -76,5 +115,5 @@ const LineupView = (() => {
     });
   }
 
-  return { populateMatchSelect, renderInfo, renderSubstitutionTimeline, renderBench, getPositionsAtMinute };
+  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderBench, getPositionsAtMinute };
 })();

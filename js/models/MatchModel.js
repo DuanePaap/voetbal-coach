@@ -40,6 +40,18 @@ const MatchModel = (() => {
     }
   }
 
+  function toggleNoSub(matchId, playerId) {
+    const matches = _load();
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+    if (!match.noSubPlayers) match.noSubPlayers = [];
+    const idx = match.noSubPlayers.indexOf(playerId);
+    if (idx === -1) match.noSubPlayers.push(playerId);
+    else match.noSubPlayers.splice(idx, 1);
+    _save(matches);
+    return getById(matchId);
+  }
+
   // Generate fair lineup with substitutions
   // Returns { lineup: [{playerId, positionCode, positionIndex}], substitutions: [{minute, playerOut, playerIn}], periods: [...] }
   function generateLineup(match, players) {
@@ -105,16 +117,22 @@ const MatchModel = (() => {
       startMinute = end;
     }
 
-    // Assign bench rotation: players with least preferred positions on bench first
-    const sortedByFit = [...present].sort((a, b) => {
+    const noSub = new Set(match.noSubPlayers || []);
+
+    // No-sub players always start and never come off — count them as starters
+    const noSubPresent  = present.filter(p => noSub.has(p.id));
+    const subEligible   = present.filter(p => !noSub.has(p.id));
+    const slotsForSubs  = numOnField - noSubPresent.length;
+
+    // Sort sub-eligible players: worst fit first on bench
+    const sortedByFit = [...subEligible].sort((a, b) => {
       const aFit = positions.filter(p => (a.preferredPositions || []).includes(p.code)).length;
       const bFit = positions.filter(p => (b.preferredPositions || []).includes(p.code)).length;
-      return aFit - bFit; // worst fit first on bench
+      return aFit - bFit;
     });
 
-    // Bench players cycle through; each period one bench player swaps with a field player
-    const benchQueue = sortedByFit.slice(numOnField);
-    const fieldStarters = sortedByFit.slice(0, numOnField);
+    const benchQueue   = sortedByFit.slice(slotsForSubs);
+    const fieldStarters = [...noSubPresent, ...sortedByFit.slice(0, slotsForSubs)];
 
     const lineupMap = {}; // playerId -> [{start, end, positionCode, positionIndex}]
 
@@ -131,10 +149,10 @@ const MatchModel = (() => {
       if (idx >= periods.length - 1) return;
       const period = periods[idx + 1];
 
-      // Pick field player to sub out: prefer least fit for their position
+      // Pick field player to sub out: skip no-sub players, prefer least fit
       let worstFit = null, worstScore = Infinity;
       for (const fp of currentField) {
-        if (fp.id === lineupMap[fp.id]?.[0]?.positionCode === 'GK' && (fp.preferredPositions || []).includes('GK')) continue;
+        if (noSub.has(fp.id)) continue;
         const curPos = lineupMap[fp.id]?.slice(-1)[0]?.positionCode || '';
         const s = score(fp, curPos);
         if (s < worstScore) { worstScore = s; worstFit = fp; }
@@ -166,5 +184,5 @@ const MatchModel = (() => {
     return { lineup, substitutions, periods };
   }
 
-  return { getAll, getById, save, remove, saveLineup, generateLineup };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, generateLineup };
 })();

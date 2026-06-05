@@ -23,15 +23,18 @@ const GamePlanView = (() => {
     container.innerHTML = `<h4>Opgeslagen scenario's</h4>${rows}`;
   }
 
-  function getActivePossession() {
-    const active = document.querySelector('.toggle-btn.active[data-possession]');
-    return active?.dataset.possession || 'yes';
+  function showPromptFeedback(msg) {
+    let el = document.getElementById('prompt-feedback');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'prompt-feedback';
+      el.className = 'prompt-feedback';
+      document.getElementById('btn-apply-prompt').insertAdjacentElement('afterend', el);
+    }
+    el.textContent = msg;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.textContent = ''; }, 4000);
   }
 
-  function getActiveZone() {
-    const active = document.querySelector('.zone-btn.active[data-zone]');
-    return active?.dataset.zone || 'midden-midden';
-  }
-
-  return { populateMatchSelect, renderScenarioList, getActivePossession, getActiveZone };
+  return { populateMatchSelect, renderScenarioList, showPromptFeedback };
 })();

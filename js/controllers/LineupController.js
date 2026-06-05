@@ -5,10 +5,7 @@ const LineupController = (() => {
   function init() {
     const select = document.getElementById('lineup-match-select');
     select.addEventListener('change', () => _loadMatch(select.value));
-
     document.getElementById('btn-generate-lineup').addEventListener('click', _generateLineup);
-    document.getElementById('btn-save-lineup').addEventListener('click', _saveLineup);
-
     _refreshMatchSelect();
   }
 
@@ -23,20 +20,49 @@ const LineupController = (() => {
   function _loadMatch(matchId) {
     _currentMatchId = matchId;
     _currentMinute = 0;
-    const match = MatchModel.getById(matchId);
+    _renderAll();
+  }
+
+  function _renderAll() {
+    const match = MatchModel.getById(_currentMatchId);
     const players = PlayerModel.getAll();
     const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
 
     LineupView.renderInfo(match, players);
+    LineupView.renderNoSubPicker(match, players);
+    LineupView.renderPeriodNav(match);
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
 
+    const svgEl = document.getElementById('lineup-field');
+    if (match && formation) {
+      const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
+      FieldView.render(svgEl, positions, match.fieldType, null);
+    } else {
+      FieldView.render(svgEl, [], 'full', null);
+    }
+  }
+
+  function showMinute(minute, btn) {
+    _currentMinute = minute;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const match = MatchModel.getById(_currentMatchId);
+    const players = PlayerModel.getAll();
+    const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
     if (match && formation) {
       const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
       FieldView.render(document.getElementById('lineup-field'), positions, match.fieldType, null);
-    } else {
-      FieldView.render(document.getElementById('lineup-field'), [], 'full', null);
     }
+  }
+
+  function toggleNoSub(playerId) {
+    if (!_currentMatchId) return;
+    MatchModel.toggleNoSub(_currentMatchId, playerId);
+    const match = MatchModel.getById(_currentMatchId);
+    const players = PlayerModel.getAll();
+    LineupView.renderNoSubPicker(match, players);
   }
 
   function _generateLineup() {
@@ -47,16 +73,13 @@ const LineupController = (() => {
     if (!result) return alert('Niet genoeg spelers voor de opstelling. Voeg meer aanwezige spelers toe.');
 
     MatchModel.saveLineup(_currentMatchId, result.lineup, result.substitutions);
-    _loadMatch(_currentMatchId);
-  }
-
-  function _saveLineup() {
-    alert('Opstelling opgeslagen!');
+    _currentMinute = 0;
+    _renderAll();
   }
 
   function refresh() {
     _refreshMatchSelect();
   }
 
-  return { init, refresh };
+  return { init, refresh, showMinute, toggleNoSub };
 })();

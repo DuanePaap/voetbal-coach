@@ -134,13 +134,12 @@
             <select id="lineup-match-select"></select>
           </div>
           <div id="lineup-info" class="lineup-info"></div>
+          <div id="no-sub-section" class="no-sub-section"></div>
+          <div id="period-nav" class="period-nav"></div>
           <div id="substitution-timeline" class="sub-timeline"></div>
           <div id="bench-list" class="bench-list"></div>
           <button class="btn btn-primary" id="btn-generate-lineup" style="width:100%;margin-top:12px">
             ⚙ Genereer opstelling
-          </button>
-          <button class="btn btn-secondary" id="btn-save-lineup" style="width:100%;margin-top:8px">
-            Opstelling opslaan
           </button>
         </div>
         <div class="lineup-field-wrapper">
@@ -169,22 +168,27 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Bal positie</label>
+              <label>Bal positie <small style="color:#888;font-weight:400">(sleep de bal op het veld)</small></label>
               <div class="ball-zone-grid" id="ball-zone-grid">
                 <button class="zone-btn" data-zone="links-achter">L-A</button>
-                <button class="zone-btn active" data-zone="midden-achter">M-A</button>
+                <button class="zone-btn" data-zone="midden-achter">M-A</button>
                 <button class="zone-btn" data-zone="rechts-achter">R-A</button>
                 <button class="zone-btn" data-zone="links-midden">L-M</button>
                 <button class="zone-btn" data-zone="midden-midden">M-M</button>
                 <button class="zone-btn" data-zone="rechts-midden">R-M</button>
                 <button class="zone-btn" data-zone="links-voor">L-V</button>
-                <button class="zone-btn" data-zone="midden-voor">M-V</button>
+                <button class="zone-btn active" data-zone="midden-voor">M-V</button>
                 <button class="zone-btn" data-zone="rechts-voor">R-V</button>
               </div>
             </div>
           </div>
+          <div class="form-group">
+            <label>Bewegingsinstructie</label>
+            <textarea id="gameplan-prompt" rows="3" placeholder="bijv: hoge pressing, backs aanvallend, breedte spelen, aanvaller sprint..."></textarea>
+            <button class="btn btn-primary" id="btn-apply-prompt" style="width:100%;margin-top:6px">↵ Toepassen</button>
+          </div>
           <div class="scenario-list" id="scenario-list"></div>
-          <button class="btn btn-primary" id="btn-save-scenario" style="width:100%;margin-top:12px">
+          <button class="btn btn-secondary" id="btn-save-scenario" style="width:100%;margin-top:8px">
             Scenario opslaan
           </button>
         </div>

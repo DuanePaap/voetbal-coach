@@ -250,6 +250,24 @@ input:focus, select:focus { border-color: var(--green-dark); }
 .field-svg { width: 100%; max-width: 440px; border-radius: var(--radius); }
 
 .lineup-info { background: var(--gray-100); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: .85rem; }
+.lineup-info .sub-count { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; background: var(--orange); color: #fff; padding: 2px 9px; border-radius: 12px; font-size: .75rem; font-weight: 700; }
+
+/* No-sub section */
+.no-sub-section { margin-bottom: 12px; }
+.no-sub-section h4 { font-size: .82rem; font-weight: 700; color: var(--gray-700); text-transform: uppercase; margin-bottom: 8px; }
+.no-sub-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: var(--radius-sm); background: var(--gray-100); margin-bottom: 4px; font-size: .84rem; }
+.no-sub-row:hover { background: var(--gray-200); }
+.no-sub-name { flex: 1; }
+.no-sub-pos { font-size: .72rem; color: var(--gray-500); margin-right: 8px; }
+.lock-btn { background: none; border: 1.5px solid var(--gray-300); border-radius: 6px; cursor: pointer; padding: 2px 7px; font-size: .8rem; color: var(--gray-500); transition: all .15s; }
+.lock-btn:hover { border-color: var(--orange); }
+.lock-btn.locked { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+/* Period navigation */
+.period-nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.period-btn { padding: 5px 10px; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); background: var(--white); cursor: pointer; font-size: .78rem; font-weight: 700; color: var(--gray-700); transition: all .15s; }
+.period-btn:hover { border-color: var(--green-dark); }
+.period-btn.active { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
 
 /* Substitution timeline */
 .sub-timeline { margin-bottom: 12px; }
@@ -293,8 +311,15 @@ input:focus, select:focus { border-color: var(--green-dark); }
 .field-center-circle { fill: none; stroke: rgba(255,255,255,.8); stroke-width: 1.5; }
 .player-circle { cursor: grab; }
 .player-marker { transition: cx .5s ease, cy .5s ease; }
-.ball-marker { fill: #fff176; stroke: #555; stroke-width: 1.5; transition: cx .5s ease, cy .5s ease; }
+.ball-marker { fill: #fff176; stroke: #555; stroke-width: 1.5; cursor: grab; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.ball-marker:active { cursor: grabbing; }
+.ball-dragging { cursor: grabbing !important; user-select: none; }
 .arrow-line { stroke: rgba(255,255,255,.7); stroke-width: 2; marker-end: url(#arrowhead); stroke-dasharray: 6,3; }
+
+/* Gameplan prompt */
+#gameplan-prompt { resize: vertical; min-height: 60px; font-size: .85rem; }
+.prompt-chip { display: inline-block; padding: 2px 8px; background: #e8f4fd; color: #1a6fa0; border-radius: 10px; font-size: .72rem; font-weight: 700; margin: 2px; }
+.prompt-feedback { font-size: .78rem; color: var(--green-dark); margin-top: 6px; min-height: 18px; font-weight: 600; }
 
 /* ===== EMPTY STATES ===== */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-500); }
