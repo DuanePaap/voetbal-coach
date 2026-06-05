@@ -87,10 +87,6 @@ const FieldView = (() => {
       defs.appendChild(cp);
     });
 
-    // Circular clip path for WK ball image (coords relative to translated g)
-    const ballClip = _el('clipPath', { id: 'ball-clip' });
-    ballClip.appendChild(_el('circle', { cx: 0, cy: 0, r: 13 }));
-    defs.appendChild(ballClip);
 
     // Card gradients
     const grads = [
@@ -142,7 +138,7 @@ const FieldView = (() => {
       class: 'player-pin-marker',
       'data-index': pos.positionIndex ?? '',
       transform: `translate(${pos.x},${pos.y})`,
-      style: 'cursor:grab',
+      style: 'cursor:grab; touch-action:none',
     });
 
     // Selection ring (shown when player is selected for swapping)
@@ -337,22 +333,21 @@ const FieldView = (() => {
     });
   }
 
-  // ── Drag: player pin (click = minimal movement → onClick; drag → onDrop) ─
+  // ── Drag: player pin — listeners op svgEl (betrouwbaarder dan setPointerCapture op SVG g) ─
   function _makeCardDraggable(svgEl, cardEl, pos, onDrop, onClick) {
     let dragging = false, moved = false, startX, startY, origX, origY;
 
     cardEl.addEventListener('pointerdown', e => {
       dragging = true; moved = false;
-      cardEl.setPointerCapture(e.pointerId);
       cardEl.style.cursor = 'grabbing';
       const pt = _svgCoords(svgEl, e);
       startX = pt.x; startY = pt.y;
       origX = pos.x; origY = pos.y;
-      svgEl.appendChild(cardEl);
+      svgEl.appendChild(cardEl); // bring to front
       e.stopPropagation(); e.preventDefault();
     });
 
-    cardEl.addEventListener('pointermove', e => {
+    svgEl.addEventListener('pointermove', e => {
       if (!dragging) return;
       const pt = _svgCoords(svgEl, e);
       if (Math.abs(pt.x - startX) + Math.abs(pt.y - startY) > 6) moved = true;
@@ -362,14 +357,7 @@ const FieldView = (() => {
       e.stopPropagation(); e.preventDefault();
     });
 
-    const _cancel = () => {
-      if (!dragging) return;
-      dragging = false; moved = false;
-      cardEl.style.cursor = 'grab';
-      cardEl.setAttribute('transform', `translate(${origX},${origY})`);
-    };
-
-    cardEl.addEventListener('pointerup', e => {
+    svgEl.addEventListener('pointerup', e => {
       if (!dragging) return;
       dragging = false;
       cardEl.style.cursor = 'grab';
@@ -383,30 +371,34 @@ const FieldView = (() => {
         pos.x = nx; pos.y = ny;
         if (onDrop) onDrop(pos.positionIndex, nx, ny);
       }
-      e.stopPropagation();
     });
 
-    cardEl.addEventListener('pointercancel', _cancel);
+    svgEl.addEventListener('pointercancel', () => {
+      if (!dragging) return;
+      dragging = false; moved = false;
+      cardEl.style.cursor = 'grab';
+      cardEl.setAttribute('transform', `translate(${origX},${origY})`);
+    });
   }
 
   // ── WK ball (image-based) ──────────────────────────────────────────────
   const WK_BALL_URL = 'https://res.cloudinary.com/adidas-app/image/upload/c_limit,h_2532,q_auto:good,w_2532/v1/page-assets/40/bjq5zigqtxtz3jwgm2we.png';
 
   function _drawFootball(bx, by, R) {
-    const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`, style: 'cursor:grab' });
+    const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`,
+      style: 'cursor:grab; touch-action:none' });
     // Drop shadow
     g.appendChild(_el('ellipse', { cx: 1.5, cy: R * 0.9, rx: R * 0.85, ry: R * 0.28,
       fill: 'rgba(0,0,0,.38)', style: 'pointer-events:none' }));
-    // WK ball image clipped to circle
+    // WK ball image — CSS clip-path avoids SVG coordinate-system issues in translated groups
     const img = document.createElementNS(NS, 'image');
     img.setAttribute('href', WK_BALL_URL);
     img.setAttribute('x', -R); img.setAttribute('y', -R);
     img.setAttribute('width', R * 2); img.setAttribute('height', R * 2);
-    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    img.setAttribute('clip-path', 'url(#ball-clip)');
-    img.setAttribute('style', 'pointer-events:none');
+    img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    img.setAttribute('style', 'pointer-events:none; clip-path:circle(50% at 50% 50%); overflow:hidden');
     g.appendChild(img);
-    // Transparent hit area — image has pointer-events:none so we need an explicit target
+    // Transparent hit area (image has pointer-events:none)
     g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', 'pointer-events': 'all' }));
     return g;
   }
