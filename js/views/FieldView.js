@@ -173,8 +173,7 @@ const FieldView = (() => {
       img.setAttribute('width', R * 2);
       img.setAttribute('height', R * 2);
       img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-      img.setAttribute('clip-path', `url(#pin-clip-${index})`);
-      img.setAttribute('style', 'pointer-events:none');
+      img.setAttribute('style', 'pointer-events:none; clip-path:circle(50% at 50% 50%)');
       g.appendChild(img);
 
       // Thin colored border on top of photo
@@ -184,10 +183,12 @@ const FieldView = (() => {
       }));
     } else {
       // No photo: greyscale avatar silhouette
-      const ag = _el('g', { 'clip-path': `url(#pin-clip-${index})`, style: 'pointer-events:none' });
-      ag.appendChild(_el('rect', { x: -R, y: -R, width: R * 2, height: R * 2, fill: '#16222e' }));
+      const ag = _el('g', { style: 'pointer-events:none' });
+      // CSS clip-path on rect clips the background to a circle; head/body stay within R
+      ag.appendChild(_el('rect', { x: -R, y: -R, width: R * 2, height: R * 2, fill: '#16222e',
+        style: 'clip-path:circle(50% at 50% 50%)' }));
       ag.appendChild(_el('circle', { cx: 0, cy: -5, r: 6, fill: '#2e4455' }));
-      ag.appendChild(_el('ellipse', { cx: 0, cy: 22, rx: 13, ry: 9, fill: '#263748' }));
+      ag.appendChild(_el('ellipse', { cx: 0, cy: 8, rx: 10, ry: 6, fill: '#263748' }));
       g.appendChild(ag);
 
       // Initials (always from name, never position code)
@@ -339,6 +340,7 @@ const FieldView = (() => {
 
     cardEl.addEventListener('pointerdown', e => {
       dragging = true; moved = false;
+      svgEl.setPointerCapture(e.pointerId); // capture to SVG root — reliably delivers all move/up events
       cardEl.style.cursor = 'grabbing';
       const pt = _svgCoords(svgEl, e);
       startX = pt.x; startY = pt.y;
@@ -413,7 +415,7 @@ const FieldView = (() => {
     };
 
     ballG.addEventListener('pointerdown', e => {
-      dragging = true; ballG.setPointerCapture(e.pointerId);
+      dragging = true; svgEl.setPointerCapture(e.pointerId); // SVG root capture — reliably delivers events
       ballG.style.cursor = 'grabbing';
       startPt = _svgCoords(svgEl, e);
       const p = getPos(); origX = p.x; origY = p.y;
