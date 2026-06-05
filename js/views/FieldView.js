@@ -280,7 +280,7 @@ const FieldView = (() => {
   }
 
   // ── Main render ────────────────────────────────────────────────────────
-  // options: { cardMode, draggable, onPositionChange(idx,x,y), onBallDrop(zone) }
+  // options: { cardMode, draggable, onPositionChange(idx,x,y), onPlayerClick(idx), onBallDrop(x,y) }
   function render(svgEl, positions, fieldType, ballPos, options = {}) {
     svgEl.innerHTML = '';
     _buildDefs(svgEl, positions);
@@ -309,78 +309,30 @@ const FieldView = (() => {
     lbl.textContent = '▲  A A N V A L';
     svgEl.appendChild(lbl);
 
-    // Ball — accepts {x,y} coords or legacy zone string
+    // Ball
+    let ballG = null;
     if (ballPos !== null && ballPos !== undefined) {
       let bx, by;
       if (typeof ballPos === 'object') { bx = ballPos.x; by = ballPos.y; }
       else { const c = _zoneToBallCoords(ballPos); bx = c.x; by = c.y; }
-      const ballG = _drawFootball(bx, by, 13);
+      ballG = _drawFootball(bx, by, 13);
       svgEl.appendChild(ballG);
-      if (options.draggable) _makeBallDraggable(svgEl, ballG, options.onBallDrop);
     }
 
     // Player markers
     positions.forEach((pos, i) => {
       if (options.cardMode) {
         const selected = options.selectedPosIndex !== undefined && options.selectedPosIndex === pos.positionIndex;
-        const pin = _playerPin(pos, i, selected);
-        svgEl.appendChild(pin);
-        if (options.draggable && pos.positionIndex !== undefined) {
-          _makeCardDraggable(svgEl, pin, pos, options.onPositionChange, options.onPlayerClick);
-        }
+        svgEl.appendChild(_playerPin(pos, i, selected));
       } else {
         svgEl.appendChild(_playerCircle(pos));
       }
     });
-  }
 
-  // ── Drag: player pin — listeners op svgEl (betrouwbaarder dan setPointerCapture op SVG g) ─
-  function _makeCardDraggable(svgEl, cardEl, pos, onDrop, onClick) {
-    let dragging = false, moved = false, startX, startY, origX, origY;
-
-    cardEl.addEventListener('pointerdown', e => {
-      dragging = true; moved = false;
-      svgEl.setPointerCapture(e.pointerId); // capture to SVG root — reliably delivers all move/up events
-      cardEl.style.cursor = 'grabbing';
-      const pt = _svgCoords(svgEl, e);
-      startX = pt.x; startY = pt.y;
-      origX = pos.x; origY = pos.y;
-      svgEl.appendChild(cardEl); // bring to front
-      e.stopPropagation(); e.preventDefault();
-    });
-
-    svgEl.addEventListener('pointermove', e => {
-      if (!dragging) return;
-      const pt = _svgCoords(svgEl, e);
-      if (Math.abs(pt.x - startX) + Math.abs(pt.y - startY) > 6) moved = true;
-      const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
-      const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
-      cardEl.setAttribute('transform', `translate(${nx},${ny})`);
-      e.stopPropagation(); e.preventDefault();
-    });
-
-    svgEl.addEventListener('pointerup', e => {
-      if (!dragging) return;
-      dragging = false;
-      cardEl.style.cursor = 'grab';
-      if (!moved && onClick) {
-        cardEl.setAttribute('transform', `translate(${origX},${origY})`);
-        onClick(pos.positionIndex);
-      } else if (moved) {
-        const pt = _svgCoords(svgEl, e);
-        const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
-        const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
-        pos.x = nx; pos.y = ny;
-        if (onDrop) onDrop(pos.positionIndex, nx, ny);
-      }
-    });
-
-    svgEl.addEventListener('pointercancel', () => {
-      if (!dragging) return;
-      dragging = false; moved = false;
-      cardEl.style.cursor = 'grab';
-      cardEl.setAttribute('transform', `translate(${origX},${origY})`);
-    });
+    // Unified drag — één handler set, vervangt altijd de vorige (geen listener-accumulatie)
+    if (options.cardMode && options.draggable) {
+      _setupDrag(svgEl, positions, ballG, options.onPositionChange, options.onPlayerClick, options.onBallDrop);
+    }
   }
 
   // ── WK ball (image-based) ──────────────────────────────────────────────
@@ -389,10 +341,8 @@ const FieldView = (() => {
   function _drawFootball(bx, by, R) {
     const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`,
       style: 'cursor:grab; touch-action:none' });
-    // Drop shadow
     g.appendChild(_el('ellipse', { cx: 1.5, cy: R * 0.9, rx: R * 0.85, ry: R * 0.28,
       fill: 'rgba(0,0,0,.38)', style: 'pointer-events:none' }));
-    // WK ball image — CSS clip-path avoids SVG coordinate-system issues in translated groups
     const img = document.createElementNS(NS, 'image');
     img.setAttribute('href', WK_BALL_URL);
     img.setAttribute('x', -R); img.setAttribute('y', -R);
@@ -400,49 +350,106 @@ const FieldView = (() => {
     img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     img.setAttribute('style', 'pointer-events:none; clip-path:circle(50% at 50% 50%); overflow:hidden');
     g.appendChild(img);
-    // Transparent hit area (image has pointer-events:none)
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', 'pointer-events': 'all' }));
+    // Transparante hit-area — image heeft pointer-events:none
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'rgba(0,0,0,0)', 'pointer-events': 'all' }));
     return g;
   }
 
-  // ── Drag: football (translate-based, fires onDrop(x, y)) ───────────────
-  function _makeBallDraggable(svgEl, ballG, onDrop) {
-    let dragging = false, startPt = null, origX = 0, origY = 0;
+  // ── Unified drag: één set listeners op svgEl, verwijdert altijd de vorige set ──────────────
+  function _setupDrag(svgEl, positions, ballG, onPlayerDrop, onPlayerClick, onBallDrop) {
+    // Verwijder vorige handlers (voorkomt accumulatie bij re-renders)
+    const old = svgEl._drag;
+    if (old) {
+      svgEl.removeEventListener('pointerdown', old.down);
+      svgEl.removeEventListener('pointermove', old.move);
+      svgEl.removeEventListener('pointerup', old.up);
+      svgEl.removeEventListener('pointercancel', old.cancel);
+    }
 
-    const getPos = () => {
-      const m = (ballG.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
-      return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 200, y: 300 };
+    let drag = null; // null = geen drag actief
+
+    // Zoek het dichtstbijzijnde player-pin of ball-marker element via e.target
+    function _findDraggable(e) {
+      let el = e.target;
+      while (el && el !== svgEl) {
+        if (el.classList && el.classList.contains('player-pin-marker')) return { type: 'player', el };
+        if (el.classList && el.classList.contains('ball-marker')) return { type: 'ball', el };
+        el = el.parentNode;
+      }
+      return null;
+    }
+
+    const down = e => {
+      const found = _findDraggable(e);
+      if (!found) return;
+      e.preventDefault();
+      svgEl.setPointerCapture(e.pointerId);
+      const pt = _svgCoords(svgEl, e);
+      svgEl.appendChild(found.el); // naar voren
+
+      if (found.type === 'player') {
+        const idx = parseInt(found.el.getAttribute('data-index'), 10);
+        const pos = positions[idx];
+        if (!pos) return;
+        found.el.style.cursor = 'grabbing';
+        drag = { type: 'player', el: found.el, pos, origX: pos.x, origY: pos.y, startX: pt.x, startY: pt.y, moved: false };
+      } else {
+        if (!ballG) return;
+        const m = (found.el.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
+        const ox = m ? parseFloat(m[1]) : 200, oy = m ? parseFloat(m[2]) : 300;
+        found.el.style.cursor = 'grabbing';
+        drag = { type: 'ball', el: found.el, origX: ox, origY: oy, startX: pt.x, startY: pt.y };
+      }
     };
 
-    ballG.addEventListener('pointerdown', e => {
-      dragging = true; svgEl.setPointerCapture(e.pointerId); // SVG root capture — reliably delivers events
-      ballG.style.cursor = 'grabbing';
-      startPt = _svgCoords(svgEl, e);
-      const p = getPos(); origX = p.x; origY = p.y;
-      svgEl.appendChild(ballG);
-      e.stopPropagation(); e.preventDefault();
-    });
-    svgEl.addEventListener('pointermove', e => {
-      if (!dragging) return;
-      const pt = _svgCoords(svgEl, e);
-      const nx = Math.max(15, Math.min(385, origX + pt.x - startPt.x));
-      const ny = Math.max(15, Math.min(585, origY + pt.y - startPt.y));
-      ballG.setAttribute('transform', `translate(${nx},${ny})`);
+    const move = e => {
+      if (!drag) return;
       e.preventDefault();
-    });
-    svgEl.addEventListener('pointerup', e => {
-      if (!dragging) return;
-      dragging = false; ballG.style.cursor = 'grab';
       const pt = _svgCoords(svgEl, e);
-      const nx = Math.max(15, Math.min(385, origX + pt.x - startPt.x));
-      const ny = Math.max(15, Math.min(585, origY + pt.y - startPt.y));
-      if (onDrop) onDrop(nx, ny);
-    });
-    svgEl.addEventListener('pointercancel', () => {
-      if (!dragging) return;
-      dragging = false; ballG.style.cursor = 'grab';
-      ballG.setAttribute('transform', `translate(${origX},${origY})`);
-    });
+      const dx = pt.x - drag.startX, dy = pt.y - drag.startY;
+      if (drag.type === 'player') {
+        if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+        drag.el.setAttribute('transform', `translate(${Math.max(30, Math.min(370, drag.origX + dx))},${Math.max(22, Math.min(570, drag.origY + dy))})`);
+      } else {
+        drag.el.setAttribute('transform', `translate(${Math.max(15, Math.min(385, drag.origX + dx))},${Math.max(15, Math.min(585, drag.origY + dy))})`);
+      }
+    };
+
+    const up = e => {
+      if (!drag) return;
+      const pt = _svgCoords(svgEl, e);
+      const dx = pt.x - drag.startX, dy = pt.y - drag.startY;
+      drag.el.style.cursor = 'grab';
+      if (drag.type === 'player') {
+        if (drag.moved) {
+          const nx = Math.max(30, Math.min(370, drag.origX + dx));
+          const ny = Math.max(22, Math.min(570, drag.origY + dy));
+          drag.pos.x = nx; drag.pos.y = ny;
+          if (onPlayerDrop) onPlayerDrop(drag.pos.positionIndex, nx, ny);
+        } else {
+          drag.el.setAttribute('transform', `translate(${drag.origX},${drag.origY})`);
+          if (onPlayerClick) onPlayerClick(drag.pos.positionIndex);
+        }
+      } else {
+        const nx = Math.max(15, Math.min(385, drag.origX + dx));
+        const ny = Math.max(15, Math.min(585, drag.origY + dy));
+        if (onBallDrop) onBallDrop(nx, ny);
+      }
+      drag = null;
+    };
+
+    const cancel = () => {
+      if (!drag) return;
+      drag.el.style.cursor = 'grab';
+      drag.el.setAttribute('transform', `translate(${drag.origX},${drag.origY})`);
+      drag = null;
+    };
+
+    svgEl.addEventListener('pointerdown', down);
+    svgEl.addEventListener('pointermove', move);
+    svgEl.addEventListener('pointerup', up);
+    svgEl.addEventListener('pointercancel', cancel);
+    svgEl._drag = { down, move, up, cancel };
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
