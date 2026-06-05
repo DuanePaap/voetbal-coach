@@ -160,8 +160,8 @@ const FieldView = (() => {
     // Drop shadow
     g.appendChild(_el('circle', { cx: 1, cy: 2, r: R, fill: 'rgba(0,0,0,.6)', style: 'pointer-events:none' }));
 
-    // Base circle with position-colored gradient
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: `url(#pin-grad-${index})` }));
+    // Base circle — pointer-events:all zodat Chrome het altijd als hit-target behandelt
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: `url(#pin-grad-${index})`, 'pointer-events': 'all' }));
 
     // ── Photo or initials/number ──
     if (pos.playerPhoto) {
@@ -368,14 +368,12 @@ const FieldView = (() => {
 
     let drag = null; // null = geen drag actief
 
-    // Zoek het dichtstbijzijnde player-pin of ball-marker element via e.target
+    // Zoek dichtstbijzijnde player-pin of ball-marker via closest() — robuuster dan parentNode loop
     function _findDraggable(e) {
-      let el = e.target;
-      while (el && el !== svgEl) {
-        if (el.classList && el.classList.contains('player-pin-marker')) return { type: 'player', el };
-        if (el.classList && el.classList.contains('ball-marker')) return { type: 'ball', el };
-        el = el.parentNode;
-      }
+      const player = e.target.closest?.('.player-pin-marker');
+      if (player && svgEl.contains(player)) return { type: 'player', el: player };
+      const ball = e.target.closest?.('.ball-marker');
+      if (ball && svgEl.contains(ball)) return { type: 'ball', el: ball };
       return null;
     }
 
@@ -383,7 +381,9 @@ const FieldView = (() => {
       const found = _findDraggable(e);
       if (!found) return;
       e.preventDefault();
-      svgEl.setPointerCapture(e.pointerId);
+      // Capture op het exacte hit-element (e.target), NIET op svgEl —
+      // Chrome levert events onbetrouwbaar als setPointerCapture wordt aangeroepen op een ancestor
+      e.target.setPointerCapture(e.pointerId);
       const pt = _svgCoords(svgEl, e);
       svgEl.appendChild(found.el); // naar voren
 
