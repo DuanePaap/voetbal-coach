@@ -1,5 +1,6 @@
 'use strict';
-const { sql } = require('@vercel/postgres');
+const { neon } = require('@neondatabase/serverless');
+const sql = neon(process.env.POSTGRES_URL, { fullResults: true });
 
 async function migrate() {
   await sql`
