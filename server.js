@@ -1,18 +1,19 @@
 'use strict';
 const express = require('express');
 const path = require('path');
+const { migrate } = require('./db/database');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
 
 const authMiddleware = require('./middleware/auth');
-app.use('/api/auth',     require('./routes/auth'));
-app.use('/api/players',  authMiddleware, require('./routes/players'));
-app.use('/api/matches',  authMiddleware, require('./routes/matches'));
+app.use('/api/auth',      require('./routes/auth'));
+app.use('/api/players',   authMiddleware, require('./routes/players'));
+app.use('/api/matches',   authMiddleware, require('./routes/matches'));
 app.use('/api/gameplans', authMiddleware, require('./routes/gameplans'));
-app.use('/api/codes',    authMiddleware, require('./routes/codes'));
-app.use('/api/player',   require('./routes/player'));
+app.use('/api/codes',     authMiddleware, require('./routes/codes'));
+app.use('/api/player',    require('./routes/player'));
 
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
@@ -22,5 +23,12 @@ app.get('*', (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Voetbal Coach draait op http://localhost:${PORT}`));
+// Run DB migrations (idempotent — safe to run on every cold start)
+migrate().catch(err => console.error('Migration error:', err));
+
+// Export app for Vercel; listen only when run directly
+module.exports = app;
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Voetbal Coach draait op http://localhost:${PORT}`));
+}

@@ -1,9 +1,9 @@
 'use strict';
 const express = require('express');
-const db = require('../db/database');
+const { sql } = require('../db/database');
 const router = express.Router();
 
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0, 1
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function _generateCode() {
   let code = '';
@@ -11,38 +11,60 @@ function _generateCode() {
   return code;
 }
 
-router.get('/', (req, res) => {
-  const rows = db.prepare(`
-    SELECT plc.code, plc.player_id, plc.created_at, p.name AS player_name
-    FROM player_login_codes plc
-    JOIN players p ON p.id = plc.player_id
-    WHERE plc.coach_id = ?
-    ORDER BY p.name
-  `).all(req.coach.id);
-  res.json(rows.map(r => ({ code: r.code, playerId: r.player_id, playerName: r.player_name, createdAt: r.created_at })));
+router.get('/', async (req, res) => {
+  try {
+    const { rows } = await sql`
+      SELECT plc.code, plc.player_id, plc.created_at, p.name AS player_name
+      FROM player_login_codes plc
+      JOIN players p ON p.id = plc.player_id
+      WHERE plc.coach_id = ${req.coach.id}
+      ORDER BY p.name
+    `;
+    res.json(rows.map(r => ({ code: r.code, playerId: r.player_id, playerName: r.player_name, createdAt: r.created_at })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
 });
 
-router.post('/', (req, res) => {
-  const { playerId } = req.body;
-  if (!playerId) return res.status(400).json({ error: 'Player ID verplicht' });
+router.post('/', async (req, res) => {
+  try {
+    const { playerId } = req.body;
+    if (!playerId) return res.status(400).json({ error: 'Player ID verplicht' });
 
-  const player = db.prepare('SELECT id, name FROM players WHERE id = ? AND coach_id = ?').get(playerId, req.coach.id);
-  if (!player) return res.status(404).json({ error: 'Speler niet gevonden' });
+    const { rows: [player] } = await sql`SELECT id, name FROM players WHERE id = ${playerId} AND coach_id = ${req.coach.id}`;
+    if (!player) return res.status(404).json({ error: 'Speler niet gevonden' });
 
-  let code, attempts = 0;
-  do { code = _generateCode(); attempts++; }
-  while (db.prepare('SELECT code FROM player_login_codes WHERE code = ?').get(code) && attempts < 20);
+    // Generate a unique code
+    let code;
+    let attempts = 0;
+    do {
+      code = _generateCode();
+      const { rows: [existing] } = await sql`SELECT code FROM player_login_codes WHERE code = ${code}`;
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 20);
 
-  db.prepare('DELETE FROM player_login_codes WHERE player_id = ? AND coach_id = ?').run(playerId, req.coach.id);
-  db.prepare('INSERT INTO player_login_codes (code, player_id, coach_id, created_at) VALUES (?, ?, ?, ?)').run(code, playerId, req.coach.id, Date.now());
+    await sql`DELETE FROM player_login_codes WHERE player_id = ${playerId} AND coach_id = ${req.coach.id}`;
+    await sql`INSERT INTO player_login_codes (code, player_id, coach_id, created_at) VALUES (${code}, ${playerId}, ${req.coach.id}, ${Date.now()})`;
 
-  res.json({ code, playerId, playerName: player.name });
+    res.json({ code, playerId, playerName: player.name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
 });
 
-router.delete('/:code', (req, res) => {
-  const r = db.prepare('DELETE FROM player_login_codes WHERE code = ? AND coach_id = ?').run(req.params.code.toUpperCase(), req.coach.id);
-  if (r.changes === 0) return res.status(404).json({ error: 'Code niet gevonden' });
-  res.json({ ok: true });
+router.delete('/:code', async (req, res) => {
+  try {
+    const codeUpper = req.params.code.toUpperCase();
+    const result = await sql`DELETE FROM player_login_codes WHERE code = ${codeUpper} AND coach_id = ${req.coach.id}`;
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Code niet gevonden' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
 });
 
 module.exports = router;
