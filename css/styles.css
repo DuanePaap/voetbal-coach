@@ -403,9 +403,14 @@ select option { background: var(--bg-card); }
 
 .scenario-list { margin-top: 12px; }
 .scenario-list h4 { font-size: .7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
-.scenario-item { padding: 6px 10px; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border); margin-bottom: 4px; font-size: .8rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
+.scenario-item { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border); margin-bottom: 4px; font-size: .8rem; color: var(--text-muted); cursor: pointer; transition: border-color .15s, background .15s; }
+.scenario-item:hover { border-color: rgba(255,107,53,.45); background: var(--bg-card); }
+.scenario-item.active { border-color: var(--accent); background: rgba(255,107,53,.12); color: var(--text); }
+.scenario-header { font-weight: 700; font-size: .78rem; }
+.scenario-desc { margin-top: 3px; font-size: .75rem; color: var(--text-muted); line-height: 1.35; }
+.scenario-item.active .scenario-desc { color: rgba(255,255,255,.7); }
 
-#gameplan-prompt { resize: vertical; min-height: 60px; font-size: .85rem; }
+#gameplan-description { resize: vertical; min-height: 60px; font-size: .85rem; }
 .prompt-feedback { font-size: .78rem; color: var(--accent); margin-top: 6px; min-height: 18px; font-weight: 700; }
 
 /* ===== FIELD SVG ELEMENTS ===== */

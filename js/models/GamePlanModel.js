@@ -10,31 +10,37 @@ const GamePlanModel = (() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
-  // Returns gameplan for a match: { matchId, scenarios: { "yes_midden-midden": [{positionCode, x, y}] } }
   function getForMatch(matchId) {
     const all = _load();
-    return all[matchId] || { matchId, scenarios: {} };
+    const gp = all[matchId] || { matchId, scenarios: [] };
+    // Migrate old key-value format to array format
+    if (gp.scenarios && !Array.isArray(gp.scenarios)) {
+      gp.scenarios = Object.keys(gp.scenarios).map(key => {
+        const [possession, ...zoneParts] = key.split('_');
+        return { possession, zone: zoneParts.join('_'), ballPos: null, description: '', positions: gp.scenarios[key] };
+      });
+    }
+    return gp;
   }
 
-  function saveScenario(matchId, possession, zone, positions) {
+  // Adds new or replaces existing scenario with same possession+zone
+  function saveScenario(matchId, possession, zone, ballPos, positions, description) {
     const all = _load();
-    if (!all[matchId]) all[matchId] = { matchId, scenarios: {} };
-    const key = `${possession}_${zone}`;
-    all[matchId].scenarios[key] = positions;
+    const gp = getForMatch(matchId);
+    const idx = gp.scenarios.findIndex(s => s.possession === possession && s.zone === zone);
+    const scenario = { possession, zone, ballPos, positions, description: description || '' };
+    if (idx !== -1) gp.scenarios[idx] = scenario;
+    else gp.scenarios.push(scenario);
+    all[matchId] = gp;
     _save(all);
   }
 
   function getScenario(matchId, possession, zone) {
-    const gp = getForMatch(matchId);
-    return gp.scenarios[`${possession}_${zone}`] || null;
+    return getForMatch(matchId).scenarios.find(s => s.possession === possession && s.zone === zone) || null;
   }
 
   function listScenarios(matchId) {
-    const gp = getForMatch(matchId);
-    return Object.keys(gp.scenarios).map(key => {
-      const [possession, ...zoneParts] = key.split('_');
-      return { key, possession, zone: zoneParts.join('_') };
-    });
+    return getForMatch(matchId).scenarios;
   }
 
   return { getForMatch, saveScenario, getScenario, listScenarios };
