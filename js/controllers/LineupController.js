@@ -88,6 +88,33 @@ const LineupController = (() => {
     LineupView.renderNoSubPicker(match, players);
   }
 
+  function editSub(subIdx) {
+    const match = MatchModel.getById(_currentMatchId);
+    const sub = match?.substitutions?.[subIdx];
+    if (!sub) return;
+    const row = document.getElementById(`sub-row-${subIdx}`);
+    if (!row) return;
+    row.querySelector('.sub-display').style.display = 'none';
+    row.querySelector('.sub-edit-form').style.display = '';
+    const outSel = document.getElementById(`sub-out-${subIdx}`);
+    const inSel  = document.getElementById(`sub-in-${subIdx}`);
+    if (outSel) outSel.value = sub.playerOut;
+    if (inSel)  inSel.value  = sub.playerIn;
+  }
+
+  function saveSub(subIdx) {
+    const playerOut = document.getElementById(`sub-out-${subIdx}`)?.value;
+    const playerIn  = document.getElementById(`sub-in-${subIdx}`)?.value;
+    if (!playerOut || !playerIn) return;
+    if (playerOut === playerIn) return alert('Kies twee verschillende spelers.');
+    MatchModel.overrideSubstitution(_currentMatchId, subIdx, playerOut, playerIn);
+    _renderAll();
+  }
+
+  function cancelSub() {
+    _renderAll();
+  }
+
   function _generateLineup() {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
     const match = MatchModel.getById(_currentMatchId);
@@ -104,5 +131,5 @@ const LineupController = (() => {
     _refreshMatchSelect();
   }
 
-  return { init, refresh, showMinute, toggleNoSub };
+  return { init, refresh, showMinute, toggleNoSub, editSub, saveSub, cancelSub };
 })();

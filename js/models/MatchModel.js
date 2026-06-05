@@ -145,15 +145,17 @@ const MatchModel = (() => {
 
     subMinutes.forEach((minute, momentIdx) => {
       const incoming = subAssignments[momentIdx];
+      const addedThisRound = new Set(); // prevent immediately subbing off a just-added player
+
       incoming.forEach(benchPlayer => {
-        // Pick worst-fit non-no-sub field player
+        // Pick worst-fit non-no-sub field player; skip players added this round
         let worstFit = null, worstScore = Infinity;
         for (const fp of currentField) {
-          if (noSub.has(fp.id)) continue;
+          if (noSub.has(fp.id) || addedThisRound.has(fp.id)) continue;
           const s = score(fp, lineupMap[fp.id]?.slice(-1)[0]?.positionCode || '');
           if (s < worstScore) { worstScore = s; worstFit = fp; }
         }
-        const playerOut = worstFit || currentField.find(p => !noSub.has(p.id));
+        const playerOut = worstFit || currentField.find(p => !noSub.has(p.id) && !addedThisRound.has(p.id));
         if (!playerOut) return;
 
         const outSlot = lineupMap[playerOut.id]?.slice(-1)[0];
@@ -169,6 +171,7 @@ const MatchModel = (() => {
 
         currentField = currentField.filter(p => p.id !== playerOut.id);
         currentField.push(benchPlayer);
+        addedThisRound.add(benchPlayer.id);
       });
     });
 
@@ -189,11 +192,62 @@ const MatchModel = (() => {
     _save(matches);
   }
 
+  // Rebuild lineup slots from initial starters + current substitutions list
+  function rebuildLineupFromSubs(matchId) {
+    const match = getById(matchId);
+    if (!match?.lineup?.length) return null;
+    const matchMinutes = 60;
+
+    const initialSlots = match.lineup.filter(l => l.startMinute === 0);
+    const lineupMap = {};
+    initialSlots.forEach(slot => {
+      lineupMap[slot.playerId] = [{
+        startMinute: 0, endMinute: matchMinutes,
+        positionCode: slot.positionCode, positionIndex: slot.positionIndex,
+      }];
+    });
+
+    const subs = [...(match.substitutions || [])].sort((a, b) => a.minute - b.minute);
+    subs.forEach(sub => {
+      const outSlots = lineupMap[sub.playerOut];
+      if (!outSlots) return;
+      const outSlot = outSlots[outSlots.length - 1];
+      if (!outSlot || outSlot.endMinute <= sub.minute) return;
+      outSlot.endMinute = sub.minute;
+
+      if (!lineupMap[sub.playerIn]) lineupMap[sub.playerIn] = [];
+      lineupMap[sub.playerIn].push({
+        startMinute: sub.minute, endMinute: matchMinutes,
+        positionCode: outSlot.positionCode, positionIndex: outSlot.positionIndex,
+      });
+    });
+
+    const lineup = [];
+    Object.entries(lineupMap).forEach(([playerId, slots]) => {
+      slots.forEach(slot => lineup.push({ playerId, ...slot }));
+    });
+
+    const matches = _load();
+    const idx = matches.findIndex(m => m.id === matchId);
+    if (idx !== -1) { matches[idx].lineup = lineup; _save(matches); }
+    return getById(matchId);
+  }
+
+  // Change playerOut / playerIn for a specific substitution and rebuild lineup
+  function overrideSubstitution(matchId, subIdx, playerOut, playerIn) {
+    const matches = _load();
+    const match = matches.find(m => m.id === matchId);
+    if (!match?.substitutions?.[subIdx]) return null;
+    match.substitutions[subIdx] = { ...match.substitutions[subIdx], playerOut, playerIn };
+    _save(matches);
+    return rebuildLineupFromSubs(matchId);
+  }
+
   function clearPositionOverrides(matchId) {
     const matches = _load();
     const match = matches.find(m => m.id === matchId);
     if (match) { match.positionOverrides = {}; _save(matches); }
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution };
 })();

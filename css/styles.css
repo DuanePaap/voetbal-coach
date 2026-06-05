@@ -354,6 +354,18 @@ select option { background: var(--bg-card); }
 }
 .sub-row:last-child { border-bottom: none; }
 .sub-arrow { color: var(--accent); font-size: 1rem; }
+.sub-display { display: flex; align-items: center; gap: 6px; width: 100%; }
+.btn-sub-edit {
+  background: none; border: none; cursor: pointer; opacity: .45;
+  padding: 0 2px; font-size: .8rem; margin-left: auto; flex-shrink: 0;
+}
+.btn-sub-edit:hover { opacity: 1; }
+.sub-edit-form { width: 100%; padding: 4px 0 6px; }
+.sub-edit-select {
+  width: 100%; padding: 5px 6px; font-size: .8rem;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+}
 
 /* Bench / speeltijden */
 .bench-list { margin-bottom: 12px; }

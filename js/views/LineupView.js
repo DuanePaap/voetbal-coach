@@ -67,12 +67,29 @@ const LineupView = (() => {
       container.innerHTML = '<h4>Wissels</h4><p style="font-size:.8rem;color:#aaa">Geen wissels gepland.</p>';
       return;
     }
-    const playerName = id => players.find(p => p.id === id)?.name?.split(' ')[0] || '?';
-    const rows = match.substitutions.map(sub => `
-      <div class="sub-row">
-        <span class="sub-arrow">↓</span> ${playerName(sub.playerOut)}
-        <span class="sub-arrow">↑</span> ${playerName(sub.playerIn)}
-        <small style="margin-left:auto;color:#888">${sub.minute}'</small>
+    const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
+    const opts = present.map(p => `<option value="${p.id}">${p.name.split(' ')[0]} (#${p.number || '?'})</option>`).join('');
+
+    const rows = match.substitutions.map((sub, idx) => `
+      <div class="sub-row" id="sub-row-${idx}">
+        <div class="sub-display">
+          <span class="sub-arrow">↓</span> ${present.find(p=>p.id===sub.playerOut)?.name?.split(' ')[0]||'?'}
+          <span class="sub-arrow">↑</span> ${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
+          <small style="margin-left:auto;color:#888">${sub.minute}'</small>
+          <button class="btn-sub-edit" onclick="LineupController.editSub(${idx})" title="Aanpassen">✏️</button>
+        </div>
+        <div class="sub-edit-form" style="display:none">
+          <div style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--text-muted);margin-bottom:2px">
+            <span>↓ eraf</span><span style="margin-left:auto">${sub.minute}'</span>
+          </div>
+          <select id="sub-out-${idx}" class="sub-edit-select">${opts}</select>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;margin-bottom:2px">↑ erbij</div>
+          <select id="sub-in-${idx}" class="sub-edit-select">${opts}</select>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-primary" style="flex:1;font-size:.75rem;padding:4px 0" onclick="LineupController.saveSub(${idx})">Opslaan</button>
+            <button class="btn btn-secondary" style="flex:1;font-size:.75rem;padding:4px 0" onclick="LineupController.cancelSub()">Annuleer</button>
+          </div>
+        </div>
       </div>`).join('');
     container.innerHTML = `<h4>Wissels</h4>${rows}`;
   }
