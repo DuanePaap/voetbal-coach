@@ -640,6 +640,22 @@ select option { background: var(--bg-card); }
   color: var(--accent); font-weight: 700; font-size: .8rem;
 }
 
+/* ===== HAMBURGER BUTTON ===== */
+.nav-hamburger {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 7px 9px; cursor: pointer; flex-shrink: 0; transition: border-color .15s;
+}
+.nav-hamburger:hover { border-color: var(--border-light); }
+.nav-hamburger span {
+  display: block; width: 18px; height: 2px; background: var(--text-muted);
+  border-radius: 2px; transition: transform .22s, opacity .18s, background .15s;
+  transform-origin: center;
+}
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); background: var(--accent); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: var(--accent); }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
   .players-layout { grid-template-columns: 1fr; }
@@ -648,12 +664,64 @@ select option { background: var(--bg-card); }
 @media (max-width: 960px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .lineup-wrapper, .gameplan-wrapper { grid-template-columns: 1fr; }
+  .lineup-field-wrapper, .gameplan-field-wrapper { order: -1; }
   .form-row { grid-template-columns: 1fr; }
-  .nav-btn { padding: 6px 10px; font-size: .76rem; }
+}
+@media (max-width: 768px) {
+  /* Hamburger: show button, hide inline nav */
+  .nav-hamburger { display: flex; }
+  .coach-name { display: none; }
+
+  .nav-links {
+    position: absolute; top: 60px; left: 0; right: 0;
+    background: #040709; border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0,0,0,.65);
+    flex-direction: column; align-items: stretch; gap: 2px;
+    padding: 8px 12px 14px; margin-left: 0;
+    display: none; z-index: 101;
+  }
+  .nav-links.open { display: flex; }
+
+  .nav-btn {
+    padding: 12px 16px; font-size: .88rem;
+    width: 100%; text-align: left;
+    border-radius: var(--radius-sm);
+  }
+  .nav-btn:hover { background: rgba(255,255,255,.05); }
+  .nav-btn.active { border-radius: var(--radius-sm); }
+
+  /* Layout */
+  .main-content { padding: 16px; }
+  .page-header { flex-wrap: wrap; gap: 10px; }
+  .page-header .btn { flex: 1 1 auto; justify-content: center; min-width: 140px; }
+
+  /* Player table: hide Nr. and Login code columns */
+  .player-table th:nth-child(3), .player-table td:nth-child(3),
+  .player-table th:nth-child(4), .player-table td:nth-child(4) { display: none; }
+  .player-table-wrapper { overflow-x: auto; }
+
+  /* Matches */
+  .match-card { flex-wrap: wrap; gap: 10px; }
+
+  /* Player app */
+  .player-match-bar { max-width: 100%; padding: 12px 16px 0; }
 }
 @media (max-width: 700px) {
   .auth-left { display: none; }
-  .auth-right { width: 100%; }
-  .auth-right { padding: 32px 24px; }
+  .auth-right { width: 100%; padding: 32px 24px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .main-content { padding: 12px; }
+  .page-header h1 { font-size: 1.1rem; }
+  .modal-box { padding: 16px; }
+  .stat-card { padding: 12px 14px; }
+  .stat-card-value { font-size: 1.8rem; }
+
+  /* Also hide Status column on small phones */
+  .player-table th:nth-child(5), .player-table td:nth-child(5) { display: none; }
+
+  .auth-right { padding: 24px 20px; }
+  .match-card { padding: 12px 14px; }
+  .match-title { font-size: .9rem; }
 }

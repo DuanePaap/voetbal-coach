@@ -110,10 +110,44 @@
     });
   }
 
+  function _closeMenus() {
+    document.querySelectorAll('.nav-links.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.nav-hamburger.open').forEach(el => {
+      el.classList.remove('open');
+      el.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function _initHamburger(hamburgerId, linksId) {
+    const btn = document.getElementById(hamburgerId);
+    const links = document.getElementById(linksId);
+    if (!btn || !links) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const opening = !links.classList.contains('open');
+      _closeMenus();
+      if (opening) {
+        links.classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    // Hamburger menus
+    _initHamburger('nav-hamburger', 'nav-links');
+    _initHamburger('player-nav-hamburger', 'player-nav-links');
+
+    // Close menus when clicking outside navbar
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.navbar')) _closeMenus();
+    });
+
     // Coach tab navigation
     document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
       btn.addEventListener('click', () => {
+        _closeMenus();
         document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
@@ -122,6 +156,11 @@
         if (btn.dataset.page === 'opstelling') LineupController.refresh();
         if (btn.dataset.page === 'gameplan') GamePlanController.refresh();
       });
+    });
+
+    // Close player nav menu when player page button is clicked
+    document.querySelectorAll('.nav-btn[data-player-page]').forEach(btn => {
+      btn.addEventListener('click', _closeMenus);
     });
 
     document.getElementById('btn-logout')?.addEventListener('click', () => AuthModel.logout());
