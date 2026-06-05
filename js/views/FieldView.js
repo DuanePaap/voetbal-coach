@@ -122,7 +122,7 @@ const FieldView = (() => {
   }
 
   // ── FC 26-style player pin ─────────────────────────────────────────────
-  function _playerPin(pos, index, selected = false) {
+  function _playerPin(pos, index, selected = false, draggable = true) {
     const R   = 20;
     const col = _posColor(pos.positionCode);
 
@@ -138,7 +138,7 @@ const FieldView = (() => {
       class: 'player-pin-marker',
       'data-index': pos.positionIndex ?? '',
       transform: `translate(${pos.x},${pos.y})`,
-      style: 'cursor:grab; touch-action:none',
+      style: draggable ? 'cursor:grab; touch-action:none' : 'cursor:default; touch-action:auto',
     });
 
     // Selection ring (shown when player is selected for swapping)
@@ -283,6 +283,7 @@ const FieldView = (() => {
   // options: { cardMode, draggable, onPositionChange(idx,x,y), onPlayerClick(idx), onBallDrop(x,y) }
   function render(svgEl, positions, fieldType, ballPos, options = {}) {
     svgEl.innerHTML = '';
+    svgEl.style.touchAction = options.draggable ? 'none' : 'auto';
     _buildDefs(svgEl, positions);
 
     // Grass base
@@ -315,7 +316,7 @@ const FieldView = (() => {
       let bx, by;
       if (typeof ballPos === 'object') { bx = ballPos.x; by = ballPos.y; }
       else { const c = _zoneToBallCoords(ballPos); bx = c.x; by = c.y; }
-      ballG = _drawFootball(bx, by, 13);
+      ballG = _drawFootball(bx, by, 13, !!options.draggable);
       svgEl.appendChild(ballG);
     }
 
@@ -323,7 +324,7 @@ const FieldView = (() => {
     positions.forEach((pos, i) => {
       if (options.cardMode) {
         const selected = options.selectedPosIndex !== undefined && options.selectedPosIndex === pos.positionIndex;
-        svgEl.appendChild(_playerPin(pos, i, selected));
+        svgEl.appendChild(_playerPin(pos, i, selected, !!options.draggable));
       } else {
         svgEl.appendChild(_playerCircle(pos));
       }
@@ -338,9 +339,9 @@ const FieldView = (() => {
   // ── WK ball (image-based) ──────────────────────────────────────────────
   const WK_BALL_URL = 'https://res.cloudinary.com/adidas-app/image/upload/c_limit,h_2532,q_auto:good,w_2532/v1/page-assets/40/bjq5zigqtxtz3jwgm2we.png';
 
-  function _drawFootball(bx, by, R) {
+  function _drawFootball(bx, by, R, draggable = true) {
     const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`,
-      style: 'cursor:grab; touch-action:none' });
+      style: draggable ? 'cursor:grab; touch-action:none' : 'cursor:default; touch-action:auto' });
     g.appendChild(_el('ellipse', { cx: 1.5, cy: R * 0.9, rx: R * 0.85, ry: R * 0.28,
       fill: 'rgba(0,0,0,.38)', style: 'pointer-events:none' }));
     const img = document.createElementNS(NS, 'image');

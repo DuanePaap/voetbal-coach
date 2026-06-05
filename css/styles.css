@@ -477,7 +477,7 @@ select option { background: var(--bg-card); }
   border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
 }
 .lineup-field-wrapper { display: flex; justify-content: center; }
-.field-svg { width: 100%; max-width: 520px; border-radius: var(--radius); touch-action: none; }
+.field-svg { width: 100%; max-width: 520px; border-radius: var(--radius); touch-action: auto; }
 
 .lineup-info {
   background: var(--bg-elevated); border: 1px solid var(--border);
