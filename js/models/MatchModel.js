@@ -65,25 +65,33 @@ const MatchModel = (() => {
 
     if (present.length < numOnField) return null;
 
-    // Score player fit for a position (higher = better)
+    // Score player fit for a position — uses mainPosition + preferredPositions combined
     function score(player, posCode) {
       const prefs = player.preferredPositions || [];
-      if (posCode === 'GK') return prefs.includes('GK') ? 10 : -20;
-      if (prefs.includes('GK') && !prefs.includes(posCode)) return -10;
+      const all   = new Set([player.mainPosition, ...prefs].filter(Boolean));
+
+      if (posCode === 'GK') return all.has('GK') ? 10 : -20;
+      if (all.has('GK') && !all.has(posCode)) return -10; // keeper shouldn't play outfield
       if (player.mainPosition === posCode) return 5;
       if (prefs.includes(posCode)) return 3;
-      const groups = [['LB','CB','RB'], ['CDM','LM','CM','RM'], ['CAM','LW','RW','ST']];
-      for (const grp of groups) {
-        if (grp.includes(posCode) && prefs.some(p => grp.includes(p))) return 1;
+      const grps = [['LB','CB','RB'], ['CDM','LM','CM','RM'], ['CAM','LW','RW','ST']];
+      for (const grp of grps) {
+        if (grp.includes(posCode) && [...all].some(p => grp.includes(p))) return 1;
       }
       return 0;
     }
 
-    // Greedy assignment: GK first, then by best score
+    // Greedy assignment: most-restricted positions first (fewest qualified players), GK always first
     function assignPlayers(availablePlayers, posList) {
       const used = new Set();
       const assignment = [];
-      const sorted = [...posList].sort((a, b) => (a.code === 'GK' ? -1 : b.code === 'GK' ? 1 : 0));
+      const sorted = [...posList].sort((a, b) => {
+        if (a.code === 'GK') return -1;
+        if (b.code === 'GK') return 1;
+        const qa = availablePlayers.filter(p => score(p, a.code) > 0).length;
+        const qb = availablePlayers.filter(p => score(p, b.code) > 0).length;
+        return qa - qb; // fewer qualified → assign first
+      });
       for (const pos of sorted) {
         let best = null, bestScore = -Infinity;
         for (const p of availablePlayers) {
@@ -115,10 +123,11 @@ const MatchModel = (() => {
       return { lineup, substitutions: [] };
     }
 
-    // Sort sub-eligible: best total fit → starters; worst → bench
+    // Sort sub-eligible: best peak fit → starters (max score for any single position)
+    // Using max prevents multi-position players from outranking a specialist (e.g. GK)
     const sortedByFit = [...subEligible].sort((a, b) => {
-      const aFit = positions.reduce((s, p) => s + score(a, p.code), 0);
-      const bFit = positions.reduce((s, p) => s + score(b, p.code), 0);
+      const aFit = Math.max(...positions.map(p => score(a, p.code)));
+      const bFit = Math.max(...positions.map(p => score(b, p.code)));
       return bFit - aFit;
     });
 
