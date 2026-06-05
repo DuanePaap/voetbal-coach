@@ -247,7 +247,7 @@ input:focus, select:focus { border-color: var(--green-dark); }
 .lineup-wrapper { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
 .lineup-sidebar { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
 .lineup-field-wrapper { display: flex; justify-content: center; }
-.field-svg { width: 100%; max-width: 440px; border-radius: var(--radius); }
+.field-svg { width: 100%; max-width: 500px; border-radius: var(--radius); touch-action: none; }
 
 .lineup-info { background: var(--gray-100); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: .85rem; }
 .lineup-info .sub-count { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; background: var(--orange); color: #fff; padding: 2px 9px; border-radius: 12px; font-size: .75rem; font-weight: 700; }
@@ -311,6 +311,9 @@ input:focus, select:focus { border-color: var(--green-dark); }
 .field-center-circle { fill: none; stroke: rgba(255,255,255,.8); stroke-width: 1.5; }
 .player-circle { cursor: grab; }
 .player-marker { transition: cx .5s ease, cy .5s ease; }
+.player-card-marker { cursor: grab; }
+.player-card-marker:active { cursor: grabbing; }
+.player-card-marker:hover rect:first-of-type { filter: brightness(1.1); }
 .ball-marker { fill: #fff176; stroke: #555; stroke-width: 1.5; cursor: grab; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
 .ball-marker:active { cursor: grabbing; }
 .ball-dragging { cursor: grabbing !important; user-select: none; }

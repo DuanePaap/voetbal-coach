@@ -105,13 +105,25 @@ const LineupView = (() => {
     container.innerHTML = `<h4>Speeltijden</h4>${rows}`;
   }
 
-  // Build positions array for FieldView from match lineup at a given minute
   function getPositionsAtMinute(match, players, formation, minute) {
     const positions = formation?.positions || [];
+    const overrides = match.positionOverrides || {};
     return positions.map((pos, i) => {
-      const slot = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute <= minute && l.endMinute > minute);
+      const slot   = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute <= minute && l.endMinute > minute);
       const player = slot ? players.find(p => p.id === slot.playerId) : null;
-      return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name };
+      const ov     = overrides[String(i)];
+      const n      = (player?.preferredPositions || []).length;
+      return {
+        positionCode: pos.code,
+        x: ov?.x ?? pos.x,
+        y: ov?.y ?? pos.y,
+        positionIndex: i,
+        playerId:  player?.id,
+        playerName: player?.name,
+        playerNumber: player?.number,
+        tier: n >= 3 ? 'gold' : n >= 1 ? 'silver' : 'bronze',
+        ovr:  player?.number ? Math.min(99, player.number) : Math.min(99, 60 + n * 9),
+      };
     });
   }
 

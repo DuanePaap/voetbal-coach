@@ -184,5 +184,20 @@ const MatchModel = (() => {
     return { lineup, substitutions, periods };
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, generateLineup };
+  function savePositionOverride(matchId, positionIndex, x, y) {
+    const matches = _load();
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+    if (!match.positionOverrides) match.positionOverrides = {};
+    match.positionOverrides[String(positionIndex)] = { x: Math.round(x), y: Math.round(y) };
+    _save(matches);
+  }
+
+  function clearPositionOverrides(matchId) {
+    const matches = _load();
+    const match = matches.find(m => m.id === matchId);
+    if (match) { match.positionOverrides = {}; _save(matches); }
+  }
+
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup };
 })();

@@ -6,6 +6,20 @@ const LineupController = (() => {
     const select = document.getElementById('lineup-match-select');
     select.addEventListener('change', () => _loadMatch(select.value));
     document.getElementById('btn-generate-lineup').addEventListener('click', _generateLineup);
+
+    // Inject reset-positions button next to generate button
+    const genBtn = document.getElementById('btn-generate-lineup');
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn btn-secondary';
+    resetBtn.style.cssText = 'width:100%;margin-top:6px;font-size:.8rem';
+    resetBtn.textContent = '↺ Posities resetten';
+    resetBtn.addEventListener('click', () => {
+      if (!_currentMatchId) return;
+      MatchModel.clearPositionOverrides(_currentMatchId);
+      _renderAll();
+    });
+    genBtn.insertAdjacentElement('afterend', resetBtn);
+
     _refreshMatchSelect();
   }
 
@@ -37,9 +51,15 @@ const LineupController = (() => {
     const svgEl = document.getElementById('lineup-field');
     if (match && formation) {
       const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
-      FieldView.render(svgEl, positions, match.fieldType, null);
+      FieldView.render(svgEl, positions, match.fieldType, null, {
+        cardMode: true,
+        draggable: true,
+        onPositionChange: (posIndex, x, y) => {
+          MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y);
+        },
+      });
     } else {
-      FieldView.render(svgEl, [], 'full', null);
+      FieldView.render(svgEl, [], 'full', null, { cardMode: true });
     }
   }
 
@@ -53,7 +73,10 @@ const LineupController = (() => {
     const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
     if (match && formation) {
       const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
-      FieldView.render(document.getElementById('lineup-field'), positions, match.fieldType, null);
+      FieldView.render(document.getElementById('lineup-field'), positions, match.fieldType, null, {
+        cardMode: true, draggable: true,
+        onPositionChange: (posIndex, x, y) => { MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y); },
+      });
     }
   }
 
