@@ -147,18 +147,40 @@ select option { background: var(--bg-card); }
   margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;
 }
 
+/* ===== PHOTO UPLOAD ===== */
+.photo-upload-area {
+  position: relative; width: 100%; aspect-ratio: 3/4; max-width: 110px;
+  border: 2px dashed var(--border-light); border-radius: var(--radius);
+  overflow: hidden; cursor: pointer; background: var(--bg-elevated);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: border-color .15s;
+}
+.photo-upload-area:hover { border-color: var(--accent); }
+.photo-upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-upload-area img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; display: none; }
+.photo-upload-area img.has-photo { display: block; }
+#photo-placeholder { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); font-size: .72rem; text-align: center; pointer-events: none; }
+#photo-placeholder.hidden { display: none; }
+
 /* ===== POSITION PICKER ===== */
-.position-picker { display: flex; flex-wrap: wrap; gap: 8px; }
-.pos-btn {
-  padding: 6px 12px; border: 1px solid var(--border-light); border-radius: 20px;
-  background: var(--bg-elevated); cursor: pointer; font-size: .78rem; font-weight: 700;
-  color: var(--text-muted); transition: all .15s; text-transform: uppercase;
+.position-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.pos-pick-item { display: flex; align-items: center; gap: 0; border-radius: 20px; overflow: hidden; border: 1px solid var(--border-light); background: var(--bg-elevated); transition: border-color .15s; }
+.pos-pick-item.selected { border-color: var(--accent); }
+.pos-pick-item.is-main { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,.3); }
+.pos-pick-btn {
+  padding: 5px 10px; border: none; background: transparent; cursor: pointer;
+  font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  transition: all .15s;
 }
-.pos-btn:hover { border-color: var(--accent); color: var(--accent); }
-.pos-btn.selected {
-  background: var(--accent); border-color: var(--accent); color: #fff;
-  box-shadow: 0 0 10px var(--accent-glow);
+.pos-pick-item:hover .pos-pick-btn { color: var(--text); }
+.pos-pick-item.selected .pos-pick-btn { color: var(--accent); }
+.pos-pick-item.is-main .pos-pick-btn { color: #f59e0b; }
+.pos-star-btn {
+  padding: 5px 8px 5px 2px; border: none; background: transparent; cursor: pointer;
+  font-size: .8rem; color: var(--text-dim); transition: color .15s; display: none;
 }
+.pos-pick-item.selected .pos-star-btn { display: block; }
+.pos-pick-item.is-main .pos-star-btn { color: #f59e0b; }
 
 /* ===== FIFA PLAYER CARDS (FC 26 style) ===== */
 .player-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 8px 0; }
@@ -200,6 +222,23 @@ select option { background: var(--bg-card); }
 .fifa-rating { font-size: 1.75rem; font-weight: 900; line-height: 1; color: rgba(0,0,0,.8); letter-spacing: -1px; }
 .fifa-main-pos { font-size: .68rem; font-weight: 800; color: rgba(0,0,0,.7); letter-spacing: .5px; text-transform: uppercase; }
 .fifa-emblem { position: absolute; top: 4px; right: -115px; font-size: 1.1rem; }
+/* Photo in FIFA card */
+.fifa-photo-wrap {
+  position: absolute; inset: 0; bottom: 56px; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.fifa-photo-wrap img {
+  width: 100%; height: 100%; object-fit: cover; object-position: top center;
+  transform-origin: top center; transition: transform .3s;
+}
+.fifa-card:hover .fifa-photo-wrap img { transform: scale(1.04); }
+.fifa-photo-wrap .fifa-initials {
+  width: 72px; height: 72px; border-radius: 50%; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; font-weight: 900; color: rgba(0,0,0,.5);
+  background: rgba(0,0,0,.2);
+}
+/* Legacy - keep for fallback */
 .fifa-image { position: absolute; bottom: 68px; left: 50%; transform: translateX(-50%); width: 110px; height: 110px; display: flex; align-items: flex-end; justify-content: center; }
 .fifa-image svg { width: 100%; height: 100%; }
 .fifa-bottom { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.62); backdrop-filter: blur(2px); padding: 8px 8px 6px; text-align: center; z-index: 5; }

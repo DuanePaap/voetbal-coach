@@ -118,11 +118,12 @@ const LineupView = (() => {
         x: ov?.x ?? pos.x,
         y: ov?.y ?? pos.y,
         positionIndex: i,
-        playerId:  player?.id,
-        playerName: player?.name,
-        playerNumber: player?.number,
+        playerId:      player?.id,
+        playerName:    player?.name,
+        playerNumber:  player?.number,
+        playerPhoto:   player?.photo || null,
         tier: n >= 3 ? 'gold' : n >= 1 ? 'silver' : 'bronze',
-        ovr:  player?.number ? Math.min(99, player.number) : Math.min(99, 60 + n * 9),
+        ovr:  player?.number || null,
       };
     });
   }

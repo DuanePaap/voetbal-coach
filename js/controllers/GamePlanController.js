@@ -128,7 +128,7 @@ const GamePlanController = (() => {
     const positions = adjusted.map((pos, i) => {
       const slot = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute === 0);
       const player = slot ? players.find(p => p.id === slot.playerId) : null;
-      return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name };
+      return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name, playerPhoto: player?.photo || null };
     });
     return { positions, fieldType: match.fieldType };
   }

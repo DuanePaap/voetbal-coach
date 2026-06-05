@@ -40,16 +40,33 @@
           </div>
           <form id="player-form">
             <input type="hidden" id="player-id">
-            <div class="form-group">
-              <label>Naam</label>
-              <input type="text" id="player-name" required placeholder="Voornaam Achternaam">
+            <input type="hidden" id="player-photo-data">
+            <input type="hidden" id="player-main-position">
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>Foto</label>
+                <div class="photo-upload-area" id="photo-upload-area">
+                  <img id="photo-preview" alt="">
+                  <div id="photo-placeholder">
+                    <span style="font-size:1.8rem">📷</span>
+                    <small>Klik om foto te uploaden</small>
+                  </div>
+                  <input type="file" id="player-photo-input" accept="image/*">
+                </div>
+              </div>
+              <div style="flex:2;display:flex;flex-direction:column;gap:0">
+                <div class="form-group">
+                  <label>Naam</label>
+                  <input type="text" id="player-name" required placeholder="Voornaam Achternaam">
+                </div>
+                <div class="form-group">
+                  <label>Rugnummer</label>
+                  <input type="number" id="player-number" min="1" max="99" placeholder="1–99">
+                </div>
+              </div>
             </div>
             <div class="form-group">
-              <label>Rugnummer</label>
-              <input type="number" id="player-number" min="1" max="99" placeholder="1–99">
-            </div>
-            <div class="form-group">
-              <label>Voorkeurs posities</label>
+              <label>Posities <small style="color:var(--text-muted);font-weight:400;text-transform:none">— klik ★ om voorkeurspositie te markeren</small></label>
               <div class="position-picker" id="position-picker"></div>
             </div>
             <div class="form-actions">

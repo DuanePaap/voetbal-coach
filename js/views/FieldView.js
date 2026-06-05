@@ -72,16 +72,19 @@ const FieldView = (() => {
     });
     defs.appendChild(vignette);
 
-    // Per-player glow gradient (named by position index for uniqueness)
+    // Per-player gradients + circular photo clip paths
     (positions || []).forEach((pos, i) => {
       const col = _posColor(pos.positionCode);
       const g = _el('radialGradient', { id: `pin-grad-${i}`, cx: '35%', cy: '30%', r: '65%' });
-      const hex = col;
-      const dark = col + '88';
-      [['0%', _lighten(hex)], ['100%', _darken(hex)]].forEach(([o, c]) => {
+      [['0%', _lighten(col)], ['100%', _darken(col)]].forEach(([o, c]) => {
         const s = _el('stop', { offset: o }); s.style.stopColor = c; g.appendChild(s);
       });
       defs.appendChild(g);
+
+      // Clip path for circular photo
+      const cp = _el('clipPath', { id: `pin-clip-${i}` });
+      cp.appendChild(_el('circle', { cx: 0, cy: 0, r: 18 }));
+      defs.appendChild(cp);
     });
 
     // Card gradients
@@ -118,20 +121,17 @@ const FieldView = (() => {
   }
 
   // ── FC 26-style player pin ─────────────────────────────────────────────
-  // Large circle + name strip + position badge, draggable
   function _playerPin(pos, index) {
     const R   = 20;
     const col = _posColor(pos.positionCode);
-    const ovr = pos.ovr ?? '';
 
-    // Name: last name, max 10 chars
-    const parts = (pos.playerName || '').trim().split(' ');
-    const lastName  = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').toUpperCase();
-    const firstName = parts.length > 1 ? parts[0][0].toUpperCase() + '.' : '';
+    const parts      = (pos.playerName || '').trim().split(' ');
+    const lastName   = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').toUpperCase();
+    const firstName  = parts.length > 1 ? parts[0][0].toUpperCase() + '.' : '';
     const displayName = (firstName + ' ' + lastName).trim().slice(0, 12);
 
-    // Show label above circle for bottom-half players (keeper/defenders) to avoid clipping
-    const labelAbove = pos.y > 460;
+    // Flip label to above circle for bottom-half players to avoid clipping
+    const labelAbove = pos.y > 440;
 
     const g = _el('g', {
       class: 'player-pin-marker',
@@ -139,94 +139,72 @@ const FieldView = (() => {
       transform: `translate(${pos.x},${pos.y})`,
     });
 
-    // Outer glow ring (position color)
+    // Outer glow ring
     g.appendChild(_el('circle', {
       cx: 0, cy: 0, r: R + 5,
-      fill: 'none', stroke: col, 'stroke-width': 2,
-      opacity: '.6', style: 'pointer-events:none',
+      fill: 'none', stroke: col, 'stroke-width': 2.5,
+      opacity: '.7', style: 'pointer-events:none',
     }));
 
-    // Shadow
+    // Drop shadow
     g.appendChild(_el('circle', { cx: 1, cy: 2, r: R, fill: 'rgba(0,0,0,.6)', style: 'pointer-events:none' }));
 
-    // Main circle — radial gradient
+    // Base circle with position-colored gradient
     g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: `url(#pin-grad-${index})` }));
 
-    // Subtle inner highlight
-    g.appendChild(_el('circle', { cx: -5, cy: -6, r: 8, fill: 'rgba(255,255,255,.12)', style: 'pointer-events:none' }));
+    // ── Photo or initials/number ──
+    if (pos.playerPhoto) {
+      // Circular photo via clipPath
+      const img = document.createElementNS(NS, 'image');
+      img.setAttribute('href', pos.playerPhoto);
+      img.setAttribute('x', -R);
+      img.setAttribute('y', -R);
+      img.setAttribute('width', R * 2);
+      img.setAttribute('height', R * 2);
+      img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      img.setAttribute('clip-path', `url(#pin-clip-${index})`);
+      img.setAttribute('style', 'pointer-events:none');
+      g.appendChild(img);
 
-    // OVR rating in circle
-    if (ovr !== '') {
-      const ovrEl = _el('text', {
-        x: 0, y: 5.5, 'text-anchor': 'middle',
-        'font-size': 14, 'font-weight': '900', fill: '#fff',
-        'font-family': "'Segoe UI',sans-serif", 'letter-spacing': '-0.5',
-        style: 'pointer-events:none; text-shadow: 0 1px 3px rgba(0,0,0,.8)',
-      });
-      ovrEl.textContent = ovr;
-      g.appendChild(ovrEl);
+      // Thin colored border on top of photo
+      g.appendChild(_el('circle', {
+        cx: 0, cy: 0, r: R, fill: 'none', stroke: col,
+        'stroke-width': 2.5, style: 'pointer-events:none',
+      }));
     } else {
-      // No player: show position code
-      const pcEl = _el('text', {
+      // No photo: inner highlight + number or initials
+      g.appendChild(_el('circle', { cx: -5, cy: -5, r: 10, fill: 'rgba(255,255,255,.1)', style: 'pointer-events:none' }));
+
+      const label = pos.playerNumber ? `#${pos.playerNumber}` : (pos.playerName ? (pos.playerName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)) : pos.positionCode);
+      const numEl = _el('text', {
         x: 0, y: 5, 'text-anchor': 'middle',
-        'font-size': 10, 'font-weight': '900', fill: 'rgba(255,255,255,.5)',
-        'font-family': "'Segoe UI',sans-serif",
+        'font-size': pos.playerNumber ? 12 : 9, 'font-weight': '900', fill: '#fff',
+        'font-family': "'Segoe UI',sans-serif", 'letter-spacing': '-0.5',
         style: 'pointer-events:none',
       });
-      pcEl.textContent = pos.positionCode;
-      g.appendChild(pcEl);
+      numEl.textContent = label;
+      g.appendChild(numEl);
     }
 
-    // ── Label (name + position badge) ──
+    // ── Name pill + position badge ──
     if (pos.playerName) {
-      const nameY  = labelAbove ? -(R + 20) : R + 9;
-      const badgeY = labelAbove ? -(R + 32) : R + 22;
-      const badgeH = 13;
+      const nameY  = labelAbove ? -(R + 22) : R + 10;
+      const badgeY = labelAbove ? -(R + 34) : R + 23;
 
-      // Name pill background
-      const nameLen   = displayName.length * 5.8 + 10;
-      const nameHalf  = nameLen / 2;
-      g.appendChild(_el('rect', {
-        x: -nameHalf, y: nameY - 11, width: nameLen, height: 14, rx: 3,
-        fill: 'rgba(0,0,0,.82)', style: 'pointer-events:none',
-      }));
-
-      // Player name
-      const nameEl = _el('text', {
-        x: 0, y: nameY, 'text-anchor': 'middle',
-        'font-size': 9.5, 'font-weight': '800', fill: '#fff',
-        'font-family': "'Segoe UI',sans-serif", 'letter-spacing': '.3',
-        style: 'pointer-events:none',
-      });
+      const nw = Math.max(40, displayName.length * 5.6 + 10);
+      g.appendChild(_el('rect', { x: -nw/2, y: nameY - 11, width: nw, height: 14, rx: 3, fill: 'rgba(0,0,0,.85)', style: 'pointer-events:none' }));
+      const nameEl = _el('text', { x: 0, y: nameY, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': '800', fill: '#fff', 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
       nameEl.textContent = displayName;
       g.appendChild(nameEl);
 
-      // Position badge
-      g.appendChild(_el('rect', {
-        x: -16, y: badgeY - 10, width: 32, height: badgeH, rx: 3,
-        fill: col, style: 'pointer-events:none',
-      }));
-      const posEl = _el('text', {
-        x: 0, y: badgeY + 1, 'text-anchor': 'middle',
-        'font-size': 8, 'font-weight': '900', fill: _posTextColor(pos.positionCode),
-        'font-family': "'Segoe UI',sans-serif", 'letter-spacing': '.5',
-        style: 'pointer-events:none',
-      });
+      g.appendChild(_el('rect', { x: -16, y: badgeY - 10, width: 32, height: 13, rx: 3, fill: col, style: 'pointer-events:none' }));
+      const posEl = _el('text', { x: 0, y: badgeY + 1, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': '900', fill: _posTextColor(pos.positionCode), 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
       posEl.textContent = pos.positionCode;
       g.appendChild(posEl);
     } else {
-      // Empty slot: just show position badge
-      const badgeY = labelAbove ? -(R + 14) : R + 10;
-      g.appendChild(_el('rect', {
-        x: -16, y: badgeY - 10, width: 32, height: 13, rx: 3,
-        fill: 'rgba(255,255,255,.15)', style: 'pointer-events:none',
-      }));
-      const posEl = _el('text', {
-        x: 0, y: badgeY + 1, 'text-anchor': 'middle',
-        'font-size': 8, 'font-weight': '900', fill: 'rgba(255,255,255,.6)',
-        'font-family': "'Segoe UI',sans-serif",
-        style: 'pointer-events:none',
-      });
+      const badgeY = labelAbove ? -(R + 12) : R + 10;
+      g.appendChild(_el('rect', { x: -16, y: badgeY - 10, width: 32, height: 13, rx: 3, fill: 'rgba(255,255,255,.15)', style: 'pointer-events:none' }));
+      const posEl = _el('text', { x: 0, y: badgeY + 1, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': '900', fill: 'rgba(255,255,255,.6)', 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
       posEl.textContent = pos.positionCode;
       g.appendChild(posEl);
     }
@@ -234,24 +212,44 @@ const FieldView = (() => {
     return g;
   }
 
-  // ── Compact circle (gameplan) ──────────────────────────────────────────
+  // ── Compact pin (gameplan + fallback) — same style as _playerPin but uses pos.x/y directly
   function _playerCircle(pos) {
+    // Reuse pin style for consistency; just smaller
+    const R   = 16;
     const col = _posColor(pos.positionCode);
-    const g = _el('g', { class: 'player-marker', 'data-id': pos.playerId || '' });
-    g.appendChild(_el('circle', { cx: pos.x+1, cy: pos.y+1, r: 16, fill: 'rgba(0,0,0,.4)' }));
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: 16, fill: col,
-      transform: `translate(${pos.x},${pos.y})`, stroke: 'rgba(255,255,255,.6)', 'stroke-width': 1.5 }));
-    const pt = _el('text', { x: pos.x, y: pos.y + 4, 'text-anchor': 'middle',
-      fill: '#fff', 'font-size': 8.5, 'font-weight': '900', 'font-family': 'sans-serif' });
-    pt.textContent = pos.positionCode;
-    g.appendChild(pt);
+    const g   = _el('g', { class: 'player-marker', transform: `translate(${pos.x},${pos.y})` });
+
+    g.appendChild(_el('circle', { cx: 1, cy: 2, r: R, fill: 'rgba(0,0,0,.5)' }));
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: col, stroke: 'rgba(255,255,255,.5)', 'stroke-width': 1.5 }));
+
+    if (pos.playerPhoto) {
+      // Build a simple inline clipPath for this element
+      // (no shared defs in gameplan mode — add it inline)
+      const clipId = `gp-clip-${pos.positionCode}-${Math.random().toString(36).slice(2,6)}`;
+      const svgParent = g.ownerDocument?.querySelector('defs') || null;
+      const cp = _el('clipPath', { id: clipId });
+      cp.appendChild(_el('circle', { cx: 0, cy: 0, r: R }));
+      g.appendChild(cp);
+
+      const img = document.createElementNS(NS, 'image');
+      img.setAttribute('href', pos.playerPhoto);
+      img.setAttribute('x', -R); img.setAttribute('y', -R);
+      img.setAttribute('width', R*2); img.setAttribute('height', R*2);
+      img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      img.setAttribute('clip-path', `url(#${clipId})`);
+      g.appendChild(img);
+      g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', stroke: col, 'stroke-width': 2 }));
+    } else {
+      const pt = _el('text', { x: 0, y: 4, 'text-anchor': 'middle', fill: '#fff', 'font-size': 8, 'font-weight': '900', 'font-family': 'sans-serif' });
+      pt.textContent = pos.positionCode;
+      g.appendChild(pt);
+    }
+
     if (pos.playerName) {
-      // Name pill
-      const nm = (pos.playerName || '').split(' ').pop().toUpperCase().slice(0, 8);
-      const nw = nm.length * 5.2 + 8;
-      g.appendChild(_el('rect', { x: pos.x - nw/2, y: pos.y + 20, width: nw, height: 11, rx: 2, fill: 'rgba(0,0,0,.75)' }));
-      const nt = _el('text', { x: pos.x, y: pos.y + 29, 'text-anchor': 'middle',
-        fill: '#fff', 'font-size': 8, 'font-weight': '700', 'font-family': 'sans-serif' });
+      const nm = pos.playerName.split(' ').pop().toUpperCase().slice(0, 8);
+      const nw = nm.length * 5 + 8;
+      g.appendChild(_el('rect', { x: -nw/2, y: R+3, width: nw, height: 11, rx: 2, fill: 'rgba(0,0,0,.8)' }));
+      const nt = _el('text', { x: 0, y: R+11, 'text-anchor': 'middle', fill: '#fff', 'font-size': 7.5, 'font-weight': '700', 'font-family': 'sans-serif' });
       nt.textContent = nm;
       g.appendChild(nt);
     }
