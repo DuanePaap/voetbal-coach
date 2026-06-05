@@ -142,6 +142,7 @@ const FieldView = (() => {
       class: 'player-pin-marker',
       'data-index': pos.positionIndex ?? '',
       transform: `translate(${pos.x},${pos.y})`,
+      style: 'cursor:grab',
     });
 
     // Selection ring (shown when player is selected for swapping)
@@ -358,8 +359,15 @@ const FieldView = (() => {
       const nx = Math.max(30, Math.min(370, origX + pt.x - startX));
       const ny = Math.max(22, Math.min(570, origY + pt.y - startY));
       cardEl.setAttribute('transform', `translate(${nx},${ny})`);
-      e.stopPropagation();
+      e.stopPropagation(); e.preventDefault();
     });
+
+    const _cancel = () => {
+      if (!dragging) return;
+      dragging = false; moved = false;
+      cardEl.style.cursor = 'grab';
+      cardEl.setAttribute('transform', `translate(${origX},${origY})`);
+    };
 
     cardEl.addEventListener('pointerup', e => {
       if (!dragging) return;
@@ -377,6 +385,8 @@ const FieldView = (() => {
       }
       e.stopPropagation();
     });
+
+    cardEl.addEventListener('pointercancel', _cancel);
   }
 
   // ── WK ball (image-based) ──────────────────────────────────────────────
@@ -396,6 +406,8 @@ const FieldView = (() => {
     img.setAttribute('clip-path', 'url(#ball-clip)');
     img.setAttribute('style', 'pointer-events:none');
     g.appendChild(img);
+    // Transparent hit area — image has pointer-events:none so we need an explicit target
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', 'pointer-events': 'all' }));
     return g;
   }
 
@@ -431,6 +443,11 @@ const FieldView = (() => {
       const nx = Math.max(15, Math.min(385, origX + pt.x - startPt.x));
       const ny = Math.max(15, Math.min(585, origY + pt.y - startPt.y));
       if (onDrop) onDrop(nx, ny);
+    });
+    svgEl.addEventListener('pointercancel', () => {
+      if (!dragging) return;
+      dragging = false; ballG.style.cursor = 'grab';
+      ballG.setAttribute('transform', `translate(${origX},${origY})`);
     });
   }
 
