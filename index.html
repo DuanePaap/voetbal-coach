@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voetbal Coach</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
 
@@ -193,21 +194,8 @@
                 <button class="toggle-btn" data-possession="no">Nee</button>
               </div>
             </div>
-            <div class="form-group">
-              <label>Bal positie <small style="color:#888;font-weight:400">(sleep de bal op het veld)</small></label>
-              <div class="ball-zone-grid" id="ball-zone-grid">
-                <button class="zone-btn" data-zone="links-achter">L-A</button>
-                <button class="zone-btn" data-zone="midden-achter">M-A</button>
-                <button class="zone-btn" data-zone="rechts-achter">R-A</button>
-                <button class="zone-btn" data-zone="links-midden">L-M</button>
-                <button class="zone-btn" data-zone="midden-midden">M-M</button>
-                <button class="zone-btn" data-zone="rechts-midden">R-M</button>
-                <button class="zone-btn" data-zone="links-voor">L-V</button>
-                <button class="zone-btn active" data-zone="midden-voor">M-V</button>
-                <button class="zone-btn" data-zone="rechts-voor">R-V</button>
-              </div>
-            </div>
           </div>
+          <div id="gameplan-period-nav" class="period-nav"></div>
           <div class="form-group">
             <label>Bewegingsinstructie</label>
             <textarea id="gameplan-prompt" rows="3" placeholder="bijv: hoge pressing, backs aanvallend, breedte spelen, aanvaller sprint..."></textarea>

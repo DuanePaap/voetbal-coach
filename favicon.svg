@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <radialGradient id="sh" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.42)"/>
+    </radialGradient>
+    <radialGradient id="hl" cx="35%" cy="28%" r="40%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.72)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <!-- drop shadow -->
+  <ellipse cx="16.5" cy="29" rx="7" ry="2" fill="rgba(0,0,0,0.28)"/>
+  <!-- white ball -->
+  <circle cx="16" cy="15" r="13" fill="#fff"/>
+  <!-- 3D shading -->
+  <circle cx="16" cy="15" r="13" fill="url(#sh)"/>
+  <!-- pentagon patches -->
+  <!-- center -->
+  <polygon points="16,10.3 19.6,12.9 18.2,17.1 13.8,17.1 12.4,12.9" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- top -->
+  <polygon points="16,2.8 19.6,5.4 18.2,9.6 13.8,9.6 12.4,5.4" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- upper-right -->
+  <polygon points="23.9,6.3 27.5,8.9 26.1,13.1 21.7,13.1 20.3,8.9" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- lower-right -->
+  <polygon points="22.4,18.8 26,21.4 24.6,25.6 20.2,25.6 18.8,21.4" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- lower-left -->
+  <polygon points="9.6,18.8 13.2,21.4 11.8,25.6 7.4,25.6 6,21.4" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- upper-left -->
+  <polygon points="8.1,6.3 11.7,8.9 10.3,13.1 5.9,13.1 4.5,8.9" fill="#1a1a1a" stroke="#fff" stroke-width="0.5"/>
+  <!-- outer ring -->
+  <circle cx="16" cy="15" r="13" fill="none" stroke="#444" stroke-width="1"/>
+  <!-- specular highlight -->
+  <ellipse cx="11.5" cy="9.5" rx="3.5" ry="2.2" fill="url(#hl)" transform="rotate(-30,11.5,9.5)"/>
+</svg>

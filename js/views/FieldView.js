@@ -87,6 +87,13 @@ const FieldView = (() => {
       defs.appendChild(cp);
     });
 
+    // Ball shading gradient (3D sphere effect)
+    const ballShade = _el('radialGradient', { id: 'ball-shade', cx: '38%', cy: '32%', r: '62%' });
+    [['0%','rgba(0,0,0,0)'],['100%','rgba(0,0,0,0.42)']].forEach(([o,c]) => {
+      const s = _el('stop', { offset: o }); s.style.stopColor = c; ballShade.appendChild(s);
+    });
+    defs.appendChild(ballShade);
+
     // Card gradients
     const grads = [
       { id: 'pgrad-gold',   c: ['#7d5a00','#c99810','#f5d84a','#ffe680','#e8c420','#b88800'] },
@@ -297,16 +304,14 @@ const FieldView = (() => {
     lbl.textContent = '▲  A A N V A L';
     svgEl.appendChild(lbl);
 
-    // Ball
-    if (ballPos) {
-      const { x: bx, y: by } = _zoneToBallCoords(ballPos);
-      const ballEl = _el('circle', { cx: bx, cy: by, r: 11, class: 'ball-marker' });
-      const seamG  = _el('g', { style: 'pointer-events:none' });
-      seamG.appendChild(_el('line', { x1: bx-6, y1: by, x2: bx+6, y2: by, stroke: 'rgba(0,0,0,.25)', 'stroke-width': 1 }));
-      seamG.appendChild(_el('line', { x1: bx, y1: by-6, x2: bx, y2: by+6, stroke: 'rgba(0,0,0,.25)', 'stroke-width': 1 }));
-      svgEl.appendChild(ballEl);
-      svgEl.appendChild(seamG);
-      if (options.draggable) _makeBallDraggable(svgEl, ballEl, seamG, options.onBallDrop);
+    // Ball — accepts {x,y} coords or legacy zone string
+    if (ballPos !== null && ballPos !== undefined) {
+      let bx, by;
+      if (typeof ballPos === 'object') { bx = ballPos.x; by = ballPos.y; }
+      else { const c = _zoneToBallCoords(ballPos); bx = c.x; by = c.y; }
+      const ballG = _drawFootball(bx, by, 13);
+      svgEl.appendChild(ballG);
+      if (options.draggable) _makeBallDraggable(svgEl, ballG, options.onBallDrop);
     }
 
     // Player markers
@@ -361,27 +366,79 @@ const FieldView = (() => {
     });
   }
 
-  // ── Drag: ball ─────────────────────────────────────────────────────────
-  function _makeBallDraggable(svgEl, ballEl, seamG, onDrop) {
-    let dragging = false;
-    ballEl.addEventListener('pointerdown', e => {
-      dragging = true; ballEl.setPointerCapture(e.pointerId);
-      svgEl.classList.add('ball-dragging'); e.preventDefault();
+  // ── Pentagon helper (point at top) ────────────────────────────────────
+  function _pentagon(cx, cy, r) {
+    const pts = [];
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 72 - 90) * Math.PI / 180;
+      pts.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
+    }
+    return `M ${pts.join(' L ')} Z`;
+  }
+
+  // ── FIFA 26-style football icon ────────────────────────────────────────
+  function _drawFootball(bx, by, R) {
+    const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`, style: 'cursor:grab' });
+    // Drop shadow
+    g.appendChild(_el('ellipse', { cx: 1, cy: R * 0.85, rx: R * 0.9, ry: R * 0.32,
+      fill: 'rgba(0,0,0,.32)', style: 'pointer-events:none' }));
+    // White base
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: '#fff' }));
+    // 3D shading
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'url(#ball-shade)', style: 'pointer-events:none' }));
+    // Pentagon patches scaled to R (base coords at R=13)
+    const sc = R / 13;
+    const patchG = _el('g', { transform: `scale(${sc.toFixed(4)})`, style: 'pointer-events:none' });
+    [
+      _pentagon(0, 0, 3.6),                         // centre
+      _pentagon(0, -7.2, 2.6),                      // top
+      _pentagon(6.85, -2.22, 2.6),                  // upper-right
+      _pentagon(4.23, 5.82, 2.6),                   // lower-right
+      _pentagon(-4.23, 5.82, 2.6),                  // lower-left
+      _pentagon(-6.85, -2.22, 2.6),                 // upper-left
+    ].forEach(d => patchG.appendChild(_el('path', { d, fill: '#111' })));
+    g.appendChild(patchG);
+    // Outer ring
+    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none',
+      stroke: '#444', 'stroke-width': 0.7, style: 'pointer-events:none' }));
+    // Specular highlight
+    g.appendChild(_el('ellipse', { cx: -R * 0.33, cy: -R * 0.38, rx: R * 0.26, ry: R * 0.17,
+      fill: 'rgba(255,255,255,.65)', style: 'pointer-events:none' }));
+    return g;
+  }
+
+  // ── Drag: football (translate-based, fires onDrop(x, y)) ───────────────
+  function _makeBallDraggable(svgEl, ballG, onDrop) {
+    let dragging = false, startPt = null, origX = 0, origY = 0;
+
+    const getPos = () => {
+      const m = (ballG.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
+      return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 200, y: 300 };
+    };
+
+    ballG.addEventListener('pointerdown', e => {
+      dragging = true; ballG.setPointerCapture(e.pointerId);
+      ballG.style.cursor = 'grabbing';
+      startPt = _svgCoords(svgEl, e);
+      const p = getPos(); origX = p.x; origY = p.y;
+      svgEl.appendChild(ballG);
+      e.stopPropagation(); e.preventDefault();
     });
     svgEl.addEventListener('pointermove', e => {
       if (!dragging) return;
-      const { x, y } = _svgCoords(svgEl, e);
-      const cx = Math.max(25, Math.min(375, x)), cy = Math.max(25, Math.min(575, y));
-      ballEl.setAttribute('cx', cx); ballEl.setAttribute('cy', cy);
-      const [h, v] = seamG.querySelectorAll('line');
-      if (h) { h.setAttribute('x1', cx-6); h.setAttribute('x2', cx+6); h.setAttribute('y1', cy); h.setAttribute('y2', cy); }
-      if (v) { v.setAttribute('x1', cx); v.setAttribute('x2', cx); v.setAttribute('y1', cy-6); v.setAttribute('y2', cy+6); }
+      const pt = _svgCoords(svgEl, e);
+      const nx = Math.max(15, Math.min(385, origX + pt.x - startPt.x));
+      const ny = Math.max(15, Math.min(585, origY + pt.y - startPt.y));
+      ballG.setAttribute('transform', `translate(${nx},${ny})`);
+      e.preventDefault();
     });
     svgEl.addEventListener('pointerup', e => {
       if (!dragging) return;
-      dragging = false; svgEl.classList.remove('ball-dragging');
-      const { x, y } = _svgCoords(svgEl, e);
-      if (onDrop) onDrop(_coordsToZone(x, y));
+      dragging = false; ballG.style.cursor = 'grab';
+      const pt = _svgCoords(svgEl, e);
+      const nx = Math.max(15, Math.min(385, origX + pt.x - startPt.x));
+      const ny = Math.max(15, Math.min(585, origY + pt.y - startPt.y));
+      if (onDrop) onDrop(nx, ny);
     });
   }
 

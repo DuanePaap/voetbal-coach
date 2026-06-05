@@ -2,7 +2,9 @@ const GamePlanController = (() => {
   let _currentMatchId = null;
   let _possession = 'yes';
   let _zone = 'midden-voor';
-  let _promptPositions = null; // positions after prompt override
+  let _ballPos = { x: 200, y: 130 }; // free {x,y} ball position
+  let _currentMinute = 0;
+  let _promptPositions = null;
 
   // Dutch football instruction rules
   const _PROMPT_RULES = [
@@ -75,25 +77,18 @@ const GamePlanController = (() => {
       });
     });
 
-    document.querySelectorAll('.zone-btn[data-zone]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        _setZone(btn.dataset.zone);
-        _promptPositions = null;
-        _update();
-      });
-    });
-
     document.getElementById('btn-save-scenario').addEventListener('click', _saveScenario);
     document.getElementById('btn-apply-prompt').addEventListener('click', _applyPrompt);
 
     _refreshMatchSelect();
   }
 
-  function _setZone(zone) {
-    _zone = zone;
-    document.querySelectorAll('.zone-btn[data-zone]').forEach(b => {
-      b.classList.toggle('active', b.dataset.zone === zone);
-    });
+  function showMinute(minute, btn) {
+    _currentMinute = minute;
+    document.querySelectorAll('#gameplan-period-nav .period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    _promptPositions = null;
+    _update();
   }
 
   function _refreshMatchSelect() {
@@ -109,7 +104,10 @@ const GamePlanController = (() => {
 
   function _loadMatch(matchId) {
     _currentMatchId = matchId;
+    _currentMinute = 0;
     _promptPositions = null;
+    const match = MatchModel.getById(matchId);
+    GamePlanView.renderPeriodNav(match);
     _update();
     GamePlanView.renderScenarioList(GamePlanModel.listScenarios(matchId));
   }
@@ -121,14 +119,22 @@ const GamePlanController = (() => {
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     if (!formation) return null;
 
+    // Saved scenario: use its coordinates, but re-enrich player data at current minute
     const saved = GamePlanModel.getScenario(_currentMatchId, _possession, _zone);
-    if (saved) return { positions: saved, fieldType: match.fieldType };
+    const baseCoords = saved
+      ? saved.map(s => ({ positionCode: s.positionCode, x: s.x, y: s.y }))
+      : formation.positions.map((pos, i) => {
+          const ov = (match.positionOverrides || {})[String(i)];
+          return { positionCode: pos.code, x: ov?.x ?? pos.x, y: ov?.y ?? pos.y };
+        });
 
-    const adjusted = FormationModel.applyScenario(formation.positions, _possession, _zone);
-    const positions = adjusted.map((pos, i) => {
-      const slot = (match.lineup || []).find(l => l.positionIndex === i && l.startMinute === 0);
+    const positions = baseCoords.map((coord, i) => {
+      const slot = (match.lineup || []).find(
+        l => l.positionIndex === i && l.startMinute <= _currentMinute && l.endMinute > _currentMinute
+      );
       const player = slot ? players.find(p => p.id === slot.playerId) : null;
-      return { positionCode: pos.code, x: pos.x, y: pos.y, playerId: player?.id, playerName: player?.name, playerPhoto: player?.photo || null };
+      return { positionCode: coord.positionCode, x: coord.x, y: coord.y,
+               playerId: player?.id, playerName: player?.name, playerPhoto: player?.photo || null };
     });
     return { positions, fieldType: match.fieldType };
   }
@@ -141,13 +147,14 @@ const GamePlanController = (() => {
       document.getElementById('gameplan-field'),
       displayPositions,
       base.fieldType,
-      _zone,
+      _ballPos,
       { draggable: true, onBallDrop: _onBallDrop }
     );
   }
 
-  function _onBallDrop(zone) {
-    _setZone(zone);
+  function _onBallDrop(x, y) {
+    _ballPos = { x, y };
+    _zone = FieldView._coordsToZone(x, y);
     _promptPositions = null;
     _update();
   }
@@ -180,7 +187,7 @@ const GamePlanController = (() => {
       document.getElementById('gameplan-field'),
       _promptPositions,
       base.fieldType,
-      _zone,
+      _ballPos,
       { draggable: true, onBallDrop: _onBallDrop }
     );
   }
@@ -189,8 +196,10 @@ const GamePlanController = (() => {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
     const base = _getBasePositions();
     if (!base) return;
-    const positions = _promptPositions || base.positions;
-    GamePlanModel.saveScenario(_currentMatchId, _possession, _zone, positions);
+    // Save only coordinates (no player data — re-enriched on load per active period)
+    const coords = (_promptPositions || base.positions)
+      .map(p => ({ positionCode: p.positionCode, x: p.x, y: p.y }));
+    GamePlanModel.saveScenario(_currentMatchId, _possession, _zone, coords);
     GamePlanView.renderScenarioList(GamePlanModel.listScenarios(_currentMatchId));
     GamePlanView.showPromptFeedback('Scenario opgeslagen!');
   }
@@ -199,5 +208,5 @@ const GamePlanController = (() => {
     _refreshMatchSelect();
   }
 
-  return { init, refresh };
+  return { init, refresh, showMinute };
 })();

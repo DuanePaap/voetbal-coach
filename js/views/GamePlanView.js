@@ -36,5 +36,17 @@ const GamePlanView = (() => {
     el._timer = setTimeout(() => { el.textContent = ''; }, 4000);
   }
 
-  return { populateMatchSelect, renderScenarioList, showPromptFeedback };
+  function renderPeriodNav(match) {
+    const el = document.getElementById('gameplan-period-nav');
+    if (!el) return;
+    if (!match?.lineup?.length) { el.innerHTML = ''; return; }
+    const minutes = [0, ...(match.substitutions || []).map(s => s.minute)];
+    const unique = [...new Set(minutes)].sort((a, b) => a - b);
+    el.innerHTML = unique.map((min, i) =>
+      `<button class="period-btn${i === 0 ? ' active' : ''}" data-minute="${min}" onclick="GamePlanController.showMinute(${min}, this)">
+        ${min === 0 ? 'Start' : min + "'"}
+      </button>`).join('');
+  }
+
+  return { populateMatchSelect, renderScenarioList, showPromptFeedback, renderPeriodNav };
 })();
