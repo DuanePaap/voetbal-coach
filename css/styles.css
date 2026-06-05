@@ -403,7 +403,9 @@ select option { background: var(--bg-card); }
 
 .scenario-list { margin-top: 12px; }
 .scenario-list h4 { font-size: .7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
-.scenario-item { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border); margin-bottom: 4px; font-size: .8rem; color: var(--text-muted); cursor: pointer; transition: border-color .15s, background .15s; }
+.scenario-item { position: relative; padding: 8px 28px 8px 10px; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border); margin-bottom: 4px; font-size: .8rem; color: var(--text-muted); cursor: pointer; transition: border-color .15s, background .15s; }
+.btn-scenario-del { position: absolute; top: 7px; right: 6px; background: none; border: none; color: rgba(255,255,255,.3); cursor: pointer; font-size: .7rem; padding: 2px 3px; line-height: 1; border-radius: 3px; }
+.btn-scenario-del:hover { color: #ef4444; background: rgba(239,68,68,.12); }
 .scenario-item:hover { border-color: rgba(255,107,53,.45); background: var(--bg-card); }
 .scenario-item.active { border-color: var(--accent); background: rgba(255,107,53,.12); color: var(--text); }
 .scenario-header { font-weight: 700; font-size: .78rem; }

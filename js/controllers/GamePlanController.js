@@ -168,9 +168,22 @@ const GamePlanController = (() => {
     _renderScenarios();
   }
 
+  function deleteScenario(idx) {
+    if (!_currentMatchId) return;
+    GamePlanModel.deleteScenario(_currentMatchId, idx);
+    if (_activeScenarioIdx === idx) {
+      _activeScenarioIdx = null;
+      _promptPositions = null;
+      _update();
+    } else if (_activeScenarioIdx !== null && _activeScenarioIdx > idx) {
+      _activeScenarioIdx--;
+    }
+    _renderScenarios();
+  }
+
   function refresh() {
     _refreshMatchSelect();
   }
 
-  return { init, refresh, showMinute, loadScenario };
+  return { init, refresh, showMinute, loadScenario, deleteScenario };
 })();

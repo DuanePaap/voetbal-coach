@@ -26,6 +26,7 @@ const GamePlanView = (() => {
       return `<div class="scenario-item${isActive ? ' active' : ''}" onclick="GamePlanController.loadScenario(${i})">
         <div class="scenario-header">${posLabel} · ${zoneLabel}</div>
         ${desc}
+        <button class="btn-scenario-del" onclick="event.stopPropagation();GamePlanController.deleteScenario(${i})" title="Verwijderen">✕</button>
       </div>`;
     }).join('');
     container.innerHTML = `<h4>Opgeslagen scenario's</h4>${rows}`;

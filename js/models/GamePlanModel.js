@@ -43,5 +43,14 @@ const GamePlanModel = (() => {
     return getForMatch(matchId).scenarios;
   }
 
-  return { getForMatch, saveScenario, getScenario, listScenarios };
+  function deleteScenario(matchId, idx) {
+    const all = _load();
+    const gp = getForMatch(matchId);
+    if (idx < 0 || idx >= gp.scenarios.length) return;
+    gp.scenarios.splice(idx, 1);
+    all[matchId] = gp;
+    _save(all);
+  }
+
+  return { getForMatch, saveScenario, getScenario, listScenarios, deleteScenario };
 })();

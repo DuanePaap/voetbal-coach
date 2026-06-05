@@ -87,12 +87,10 @@ const FieldView = (() => {
       defs.appendChild(cp);
     });
 
-    // Ball shading gradient (3D sphere effect)
-    const ballShade = _el('radialGradient', { id: 'ball-shade', cx: '38%', cy: '32%', r: '62%' });
-    [['0%','rgba(0,0,0,0)'],['100%','rgba(0,0,0,0.42)']].forEach(([o,c]) => {
-      const s = _el('stop', { offset: o }); s.style.stopColor = c; ballShade.appendChild(s);
-    });
-    defs.appendChild(ballShade);
+    // Circular clip path for WK ball image (coords relative to translated g)
+    const ballClip = _el('clipPath', { id: 'ball-clip' });
+    ballClip.appendChild(_el('circle', { cx: 0, cy: 0, r: 13 }));
+    defs.appendChild(ballClip);
 
     // Card gradients
     const grads = [
@@ -381,44 +379,23 @@ const FieldView = (() => {
     });
   }
 
-  // ── Pentagon helper (point at top) ────────────────────────────────────
-  function _pentagon(cx, cy, r) {
-    const pts = [];
-    for (let i = 0; i < 5; i++) {
-      const a = (i * 72 - 90) * Math.PI / 180;
-      pts.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
-    }
-    return `M ${pts.join(' L ')} Z`;
-  }
+  // ── WK ball (image-based) ──────────────────────────────────────────────
+  const WK_BALL_URL = 'https://res.cloudinary.com/adidas-app/image/upload/c_limit,h_2532,q_auto:good,w_2532/v1/page-assets/40/bjq5zigqtxtz3jwgm2we.png';
 
-  // ── FIFA 26-style football icon ────────────────────────────────────────
   function _drawFootball(bx, by, R) {
     const g = _el('g', { class: 'ball-marker', transform: `translate(${bx},${by})`, style: 'cursor:grab' });
     // Drop shadow
-    g.appendChild(_el('ellipse', { cx: 1, cy: R * 0.85, rx: R * 0.9, ry: R * 0.32,
-      fill: 'rgba(0,0,0,.32)', style: 'pointer-events:none' }));
-    // White base
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: '#fff' }));
-    // 3D shading
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'url(#ball-shade)', style: 'pointer-events:none' }));
-    // Pentagon patches scaled to R (base coords at R=13)
-    const sc = R / 13;
-    const patchG = _el('g', { transform: `scale(${sc.toFixed(4)})`, style: 'pointer-events:none' });
-    [
-      _pentagon(0, 0, 3.6),                         // centre
-      _pentagon(0, -7.2, 2.6),                      // top
-      _pentagon(6.85, -2.22, 2.6),                  // upper-right
-      _pentagon(4.23, 5.82, 2.6),                   // lower-right
-      _pentagon(-4.23, 5.82, 2.6),                  // lower-left
-      _pentagon(-6.85, -2.22, 2.6),                 // upper-left
-    ].forEach(d => patchG.appendChild(_el('path', { d, fill: '#111' })));
-    g.appendChild(patchG);
-    // Outer ring
-    g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none',
-      stroke: '#444', 'stroke-width': 0.7, style: 'pointer-events:none' }));
-    // Specular highlight
-    g.appendChild(_el('ellipse', { cx: -R * 0.33, cy: -R * 0.38, rx: R * 0.26, ry: R * 0.17,
-      fill: 'rgba(255,255,255,.65)', style: 'pointer-events:none' }));
+    g.appendChild(_el('ellipse', { cx: 1.5, cy: R * 0.9, rx: R * 0.85, ry: R * 0.28,
+      fill: 'rgba(0,0,0,.38)', style: 'pointer-events:none' }));
+    // WK ball image clipped to circle
+    const img = document.createElementNS(NS, 'image');
+    img.setAttribute('href', WK_BALL_URL);
+    img.setAttribute('x', -R); img.setAttribute('y', -R);
+    img.setAttribute('width', R * 2); img.setAttribute('height', R * 2);
+    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    img.setAttribute('clip-path', 'url(#ball-clip)');
+    img.setAttribute('style', 'pointer-events:none');
+    g.appendChild(img);
     return g;
   }
 
