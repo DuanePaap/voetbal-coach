@@ -5,31 +5,43 @@ const PlayerAppController = (() => {
   let _playersCache = [];
   let _currentMatch = null;
   let _currentGameplan = null;
+  let _eventsRegistered = false;
+  let _isPreviewMode = false;
+
+  function _url(playerPath, coachPath) { return _isPreviewMode ? coachPath : playerPath; }
+
+  function setPreviewMode(enabled) { _isPreviewMode = !!enabled; }
 
   async function init() {
     const user = AuthModel.getUser();
     const nameEl = document.getElementById('player-name-display');
     if (nameEl && user) nameEl.textContent = user.name;
 
-    document.querySelectorAll('.nav-btn[data-player-page]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-btn[data-player-page]').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.player-page').forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(`player-page-${btn.dataset.playerPage}`)?.classList.add('active');
+    if (!_eventsRegistered) {
+      _eventsRegistered = true;
+      document.querySelectorAll('.nav-btn[data-player-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.nav-btn[data-player-page]').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.player-page').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`player-page-${btn.dataset.playerPage}`)?.classList.add('active');
+        });
       });
-    });
+      document.getElementById('player-match-select')?.addEventListener('change', e => _loadMatch(e.target.value));
+      document.getElementById('btn-player-logout')?.addEventListener('click', () => AuthModel.logout());
+    }
 
-    document.getElementById('player-match-select')?.addEventListener('change', e => _loadMatch(e.target.value));
-    document.getElementById('btn-player-logout')?.addEventListener('click', () => AuthModel.logout());
+    await reload();
+  }
 
+  async function reload() {
     const [matches, players] = await Promise.all([
-      API.get('/api/player/matches'),
-      API.get('/api/player/players'),
+      API.get(_url('/api/player/matches', '/api/matches')),
+      API.get(_url('/api/player/players', '/api/players')),
     ]);
     _playersCache = players;
+    _currentScenarioIdx = null;
     _populateMatchSelect(matches);
-
     if (matches.length) {
       const sel = document.getElementById('player-match-select');
       _currentMatchId = sel.value || matches[0].id;
@@ -54,8 +66,8 @@ const PlayerAppController = (() => {
     _currentScenarioIdx = null;
 
     const [match, gameplan] = await Promise.all([
-      API.get(`/api/player/matches/${matchId}`),
-      API.get(`/api/player/gameplans/${matchId}`),
+      API.get(_url(`/api/player/matches/${matchId}`, `/api/matches/${matchId}`)),
+      API.get(_url(`/api/player/gameplans/${matchId}`, `/api/gameplans/${matchId}`)),
     ]);
     _currentMatch = match;
     _currentGameplan = gameplan;
@@ -160,5 +172,5 @@ const PlayerAppController = (() => {
     _renderOpstellingField();
   }
 
-  return { init, loadScenario, showMinute };
+  return { init, reload, setPreviewMode, loadScenario, showMinute };
 })();

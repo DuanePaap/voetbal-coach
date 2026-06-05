@@ -134,6 +134,41 @@
     });
   }
 
+  let _playerAppInited = false;
+
+  function _enterPlayerPreview() {
+    _closeMenus();
+    PlayerAppController.setPreviewMode(true);
+    document.getElementById('app-root').style.display = 'none';
+    document.getElementById('player-app').style.display = '';
+
+    // Show back button, hide logout in player nav
+    document.getElementById('btn-back-to-coach').style.display = '';
+    document.getElementById('btn-player-logout').style.display = 'none';
+
+    // Set avatar + name to coach identity
+    const coach = AuthModel.getUser();
+    const nameEl  = document.getElementById('player-name-display');
+    const avatarEl = document.getElementById('player-avatar');
+    if (nameEl  && coach)       nameEl.textContent  = coach.name;
+    if (avatarEl && coach?.name) avatarEl.textContent = coach.name.charAt(0).toUpperCase();
+
+    if (!_playerAppInited) {
+      _playerAppInited = true;
+      PlayerAppController.init().catch(console.error);
+    } else {
+      PlayerAppController.reload().catch(console.error);
+    }
+  }
+
+  function _exitPlayerPreview() {
+    PlayerAppController.setPreviewMode(false);
+    document.getElementById('player-app').style.display = 'none';
+    document.getElementById('app-root').style.display = '';
+    document.getElementById('btn-back-to-coach').style.display = 'none';
+    document.getElementById('btn-player-logout').style.display = '';
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     // Hamburger menus
     _initHamburger('nav-hamburger', 'nav-links');
@@ -157,6 +192,12 @@
         if (btn.dataset.page === 'gameplan') GamePlanController.refresh();
       });
     });
+
+    // Switch to player preview mode
+    document.getElementById('btn-player-preview')?.addEventListener('click', _enterPlayerPreview);
+
+    // Back to coach from player preview
+    document.getElementById('btn-back-to-coach')?.addEventListener('click', _exitPlayerPreview);
 
     // Close player nav menu when player page button is clicked
     document.querySelectorAll('.nav-btn[data-player-page]').forEach(btn => {
