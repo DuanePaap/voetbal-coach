@@ -206,6 +206,15 @@
 
     document.getElementById('btn-logout')?.addEventListener('click', () => AuthModel.logout());
 
+    // Password visibility toggle
+    document.getElementById('toggle-pw')?.addEventListener('click', () => {
+      const input = document.getElementById('login-password');
+      const isText = input.type === 'text';
+      input.type = isText ? 'password' : 'text';
+      document.querySelector('#toggle-pw .eye-open').style.display = isText ? '' : 'none';
+      document.querySelector('#toggle-pw .eye-shut').style.display = isText ? 'none' : '';
+    });
+
     init().catch(console.error);
   });
 })();
