@@ -85,10 +85,11 @@ function checkA01() {
 
   const server = readFile('server.js') || '';
 
-  // Elke coach route moet authMiddleware hebben
+  // Elke coach route moet authMiddleware hebben (spaties-tolerante regex)
   const coachRoutes = ['players', 'matches', 'gameplans', 'codes'];
   for (const r of coachRoutes) {
-    if (server.includes(`authMiddleware, require('./routes/${r}')`)) {
+    const pattern = new RegExp(`authMiddleware[\\s,]+require\\('./routes/${r}'\\)`);
+    if (pattern.test(server)) {
       pass(`/api/${r} beveiligd met coachAuth middleware`);
     } else {
       fail(`/api/${r} MIST coachAuth middleware`, 'Voeg authMiddleware toe in server.js');

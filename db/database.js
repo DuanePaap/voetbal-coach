@@ -65,6 +65,13 @@ async function migrate() {
       FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at BIGINT NOT NULL DEFAULT 0
+    )
+  `;
 }
 
 module.exports = { sql, migrate };

@@ -1,4 +1,10 @@
 (() => {
+  const ADMIN_EMAIL = 'duane@smoothmedia.nl';
+
+  function _isAdmin() {
+    return AuthModel.getUser()?.email === ADMIN_EMAIL;
+  }
+
   async function init() {
     if (!AuthModel.isLoggedIn()) {
       _showAuth();
@@ -9,12 +15,17 @@
       await PlayerAppController.init();
     } else {
       _showCoachApp();
-      await Promise.all([
+      const tasks = [
         PlayerController.init(),
         MatchController.init(),
         LineupController.init(),
         GamePlanController.init(),
-      ]);
+      ];
+      if (_isAdmin()) {
+        document.getElementById('nav-btn-admin').style.display = '';
+        tasks.push(AdminController.init());
+      }
+      await Promise.all(tasks);
     }
   }
 
@@ -170,6 +181,16 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    // Load custom login background (public, no auth needed)
+    fetch('/api/login-image').then(r => r.json()).then(data => {
+      if (data?.image) {
+        const img = document.getElementById('auth-login-bg');
+        const svg = document.querySelector('.auth-hero-svg');
+        if (img) { img.src = data.image; img.style.display = ''; }
+        if (svg) svg.style.display = 'none';
+      }
+    }).catch(() => {});
+
     // Hamburger menus
     _initHamburger('nav-hamburger', 'nav-links');
     _initHamburger('player-nav-hamburger', 'player-nav-links');
