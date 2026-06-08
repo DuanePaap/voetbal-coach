@@ -27,8 +27,8 @@ app.get('/api/login-image', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
+app.all('*', (req, res) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api')) {
     res.sendFile(path.join(__dirname, 'index.html'));
   } else {
     res.status(404).json({ error: 'Niet gevonden' });
