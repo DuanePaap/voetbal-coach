@@ -1,6 +1,20 @@
 'use strict';
 const { neon } = require('@neondatabase/serverless');
-const sql = neon(process.env.POSTGRES_URL, { fullResults: true });
+
+// Lazy initialisation — neon() throws synchronously when no URL is provided,
+// which would crash server.js before any routes are registered.
+let _sql = null;
+function sql(...args) {
+  if (!_sql) {
+    if (!process.env.POSTGRES_URL) {
+      throw new Error('POSTGRES_URL is niet ingesteld. Maak een .env bestand aan met POSTGRES_URL=<jouw Neon connection string>.');
+    }
+    _sql = neon(process.env.POSTGRES_URL, { fullResults: true });
+  }
+  return _sql(...args);
+}
+// Pass the tag-function through so sql`...` keeps working everywhere
+sql.query = (...a) => sql(...a);
 
 async function migrate() {
   await sql`

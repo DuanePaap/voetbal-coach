@@ -10,7 +10,9 @@ const API = (() => {
     const opts = { method, headers: _headers() };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const res = await fetch(path, opts);
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error(`Server fout (${res.status} — geen JSON ontvangen)`); }
     if (!res.ok) {
       if (res.status === 401) {
         localStorage.removeItem('vc_token');

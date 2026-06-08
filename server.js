@@ -35,6 +35,15 @@ app.get('*', (req, res) => {
   }
 });
 
+// Global error handler — must have 4 args so Express treats it as an error handler.
+// Catches body-parser errors (payload too large, malformed JSON) and uncaught route errors.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  const message = status === 413 ? 'Bestand te groot (max 10 MB)' : (err.message || 'Server fout');
+  res.status(status).json({ error: message });
+});
+
 // Run DB migrations (idempotent — safe to run on every cold start)
 migrate().catch(err => console.error('Migration error:', err));
 
