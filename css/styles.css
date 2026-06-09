@@ -613,6 +613,42 @@ select option { background: var(--bg-card); }
 .badge-uit   { background: rgba(255,59,92,.1);   color: var(--red); border: 1px solid rgba(255,59,92,.22); }
 .match-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
+/* ── Gespeelde wedstrijden uitklap ── */
+.matches-played {
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.matches-played-summary {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 4px; cursor: pointer; list-style: none;
+  font-size: .78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text-muted);
+  user-select: none; outline: none;
+}
+.matches-played-summary::-webkit-details-marker { display: none; }
+.matches-played-summary::before {
+  content: '›';
+  font-size: 1.1rem; line-height: 1;
+  transition: transform .2s;
+  display: inline-block;
+  color: var(--text-dim);
+}
+details[open] .matches-played-summary::before { transform: rotate(90deg); }
+.matches-played-summary:hover { color: var(--text); }
+.matches-played-summary:hover::before { color: var(--text-muted); }
+
+.matches-played-count {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 20px; padding: 1px 8px;
+  font-size: .7rem; color: var(--text-dim);
+}
+
+.matches-played-list { padding-top: 4px; }
+.matches-played-list .match-card { opacity: .72; }
+.matches-played-list .match-card:hover { opacity: 1; }
+
 /* ===== PLAYER CHECKLIST ===== */
 .player-checklist {
   display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto;

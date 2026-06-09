@@ -1,32 +1,61 @@
 const MatchView = (() => {
+  function _cardHtml(m) {
+    const dateStr = new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const numPresent = (m.presentPlayers || []).length;
+    return `
+      <div class="match-card">
+        <div class="match-card-info">
+          <div class="match-title">vs ${m.opponent}</div>
+          <div class="match-meta">${dateStr} &bull; ${numPresent} spelers aanwezig</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
+            <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
+            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
+            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
+          </div>
+        </div>
+        <div class="match-card-actions">
+          <button class="btn btn-secondary btn-icon" onclick="MatchController.edit('${m.id}')" title="Bewerken">✏️</button>
+          <button class="btn btn-danger btn-icon" onclick="MatchController.remove('${m.id}')" title="Verwijderen">🗑</button>
+        </div>
+      </div>`;
+  }
+
   function renderList(matches, players) {
     const container = document.getElementById('match-list');
     if (!matches.length) {
       container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Nog geen wedstrijden aangemaakt.</p></div>`;
       return;
     }
-    const sorted = [...matches].sort((a, b) => new Date(a.date) - new Date(b.date));
-    container.innerHTML = sorted.map(m => {
-      const dateStr = new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
-      const numPresent = (m.presentPlayers || []).length;
-      return `
-        <div class="match-card">
-          <div class="match-card-info">
-            <div class="match-title">vs ${m.opponent}</div>
-            <div class="match-meta">${dateStr} &bull; ${numPresent} spelers aanwezig</div>
-            <div style="display:flex;gap:6px;margin-top:4px">
-              <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
-              <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
-              <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
-              <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
-            </div>
+
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = [...matches]
+      .filter(m => m.date >= today)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const played = [...matches]
+      .filter(m => m.date < today)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let html = upcoming.map(_cardHtml).join('');
+
+    if (!upcoming.length) {
+      html += `<div class="empty-state"><div class="empty-icon">📅</div><p>Geen aankomende wedstrijden.</p></div>`;
+    }
+
+    if (played.length) {
+      html += `
+        <details class="matches-played">
+          <summary class="matches-played-summary">
+            <span>Gespeeld</span>
+            <span class="matches-played-count">${played.length}</span>
+          </summary>
+          <div class="matches-played-list">
+            ${played.map(_cardHtml).join('')}
           </div>
-          <div class="match-card-actions">
-            <button class="btn btn-secondary btn-icon" onclick="MatchController.edit('${m.id}')" title="Bewerken">✏️</button>
-            <button class="btn btn-danger btn-icon" onclick="MatchController.remove('${m.id}')" title="Verwijderen">🗑</button>
-          </div>
-        </div>`;
-    }).join('');
+        </details>`;
+    }
+
+    container.innerHTML = html;
   }
 
   function openModal(match, players) {
