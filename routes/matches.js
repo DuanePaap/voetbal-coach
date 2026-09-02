@@ -1,6 +1,6 @@
 'use strict';
 const express = require('express');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes } = require('crypto');
 const { sql } = require('../db/database');
 const router = express.Router();
 
@@ -105,6 +105,23 @@ router.put('/:id', async (req, res) => {
       RETURNING *
     `;
     res.json(parse(row));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+// Generate (or return the existing) public share token for this match, used to build a
+// no-login WhatsApp-shareable link. Idempotent — repeated calls return the same token.
+router.post('/:id/share', async (req, res) => {
+  try {
+    const { rows: [existing] } = await sql`SELECT share_token FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
+    if (existing.share_token) return res.json({ token: existing.share_token });
+
+    const token = randomBytes(16).toString('hex');
+    await sql`UPDATE matches SET share_token = ${token} WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    res.json({ token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server fout' });

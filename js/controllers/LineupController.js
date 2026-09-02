@@ -7,6 +7,7 @@ const LineupController = (() => {
     const select = document.getElementById('lineup-match-select');
     select.addEventListener('change', () => _loadMatch(select.value));
     document.getElementById('btn-generate-lineup').addEventListener('click', _generateLineup);
+    document.getElementById('btn-share-whatsapp').addEventListener('click', shareViaWhatsapp);
 
     const genBtn = document.getElementById('btn-generate-lineup');
     const resetBtn = document.createElement('button');
@@ -140,5 +141,15 @@ const LineupController = (() => {
 
   async function refresh() { await _refreshMatchSelect(); }
 
-  return { init, refresh, showMinute, toggleNoSub, editSub, saveSub, cancelSub };
+  async function shareViaWhatsapp() {
+    if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
+    const match = await MatchModel.getById(_currentMatchId);
+    if (!match?.lineup?.length) return alert('Genereer eerst een opstelling voordat je deze deelt.');
+    const url = await MatchModel.getShareLink(_currentMatchId);
+    const dateStr = new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+    const text = `Opstelling vs ${match.opponent} (${dateStr}): ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  }
+
+  return { init, refresh, showMinute, toggleNoSub, editSub, saveSub, cancelSub, shareViaWhatsapp };
 })();

@@ -746,6 +746,23 @@ details[open] .matches-played-summary::before { transform: rotate(90deg); }
 }
 .bench-minutes { font-size: .73rem; color: var(--text-muted); }
 
+/* ===== SHARE PAGE (public, no login) ===== */
+.share-page { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
+.share-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.share-header-logo { height: 30px; width: auto; flex-shrink: 0; }
+.share-match-info { display: flex; flex-direction: column; line-height: 1.35; }
+.share-match-info strong { font-size: 1rem; color: var(--text); }
+.share-match-info span { font-size: .8rem; color: var(--text-muted); text-transform: capitalize; }
+
+.share-loading, .share-message {
+  text-align: center; color: var(--text-muted); font-size: .9rem;
+  padding: 40px 16px;
+}
+
+#share-content .lineup-field-wrapper { margin-top: 4px; }
+
 /* ===== GAMEPLAN ===== */
 .gameplan-wrapper { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
 .gameplan-sidebar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }

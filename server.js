@@ -18,6 +18,14 @@ const authLimiter = rateLimit({
   message: { error: 'Te veel pogingen, probeer het later opnieuw' },
 });
 
+const shareLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Te veel verzoeken, probeer het later opnieuw' },
+});
+
 const authMiddleware = require('./middleware/auth');
 app.use('/api/auth',      authLimiter,                 require('./routes/auth'));
 app.use('/api/players',   authMiddleware,              require('./routes/players'));
@@ -25,6 +33,7 @@ app.use('/api/matches',   authMiddleware,              require('./routes/matches
 app.use('/api/gameplans', authMiddleware,              require('./routes/gameplans'));
 app.use('/api/codes',     authMiddleware,              require('./routes/codes'));
 app.use('/api/player',                                 require('./routes/player'));
+app.use('/api/share',     shareLimiter,                require('./routes/share'));
 app.use('/api/admin',     authMiddleware.admin,        require('./routes/admin'));
 
 // Public: login background image (no auth — used by the login page)

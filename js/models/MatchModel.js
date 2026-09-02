@@ -4,6 +4,11 @@ const MatchModel = (() => {
   async function save(data)  { return data.id ? API.put(`/api/matches/${data.id}`, data) : API.post('/api/matches', data); }
   async function remove(id)  { return API.delete(`/api/matches/${id}`); }
 
+  async function getShareLink(matchId) {
+    const { token } = await API.post(`/api/matches/${matchId}/share`);
+    return `${location.origin}/share.html?t=${token}`;
+  }
+
   async function saveLineup(matchId, lineup, substitutions) {
     const m = await getById(matchId);
     return save({ ...m, lineup, substitutions });
@@ -230,5 +235,5 @@ const MatchModel = (() => {
     return { lineup, substitutions };
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution, swapLineupPlayers };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution, swapLineupPlayers, getShareLink };
 })();
