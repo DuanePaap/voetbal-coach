@@ -185,9 +185,7 @@
     fetch('/api/login-image').then(r => r.json()).then(data => {
       if (data?.image) {
         const img = document.getElementById('auth-login-bg');
-        const svg = document.querySelector('.auth-hero-svg');
         if (img) { img.src = data.image; img.style.display = ''; }
-        if (svg) svg.style.display = 'none';
       }
     }).catch(() => {});
 

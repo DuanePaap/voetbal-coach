@@ -185,12 +185,7 @@ select option { background: var(--bg-card); }
 
 /* ── Left hero panel ── */
 .auth-left {
-  flex: 1; background: #040810; position: relative; overflow: hidden;
-}
-
-.auth-hero-svg {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  pointer-events: none;
+  flex: 1; background: #0B1420; position: relative; overflow: hidden;
 }
 
 /* ── Right form panel ── */
