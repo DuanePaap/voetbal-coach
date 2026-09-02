@@ -9,6 +9,7 @@ function parseMatch(row) {
     id: row.id, opponent: row.opponent, date: row.date,
     location: row.location, fieldType: row.field_type,
     formation: row.formation, periods: row.periods,
+    duration: row.duration_minutes, subMoments: row.sub_moments,
     presentPlayers:   JSON.parse(row.present_players   || '[]'),
     noSubPlayers:     JSON.parse(row.no_sub_players     || '[]'),
     lineup:           JSON.parse(row.lineup             || '[]'),

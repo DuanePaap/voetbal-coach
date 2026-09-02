@@ -50,6 +50,8 @@ async function migrate() {
       field_type TEXT NOT NULL DEFAULT 'half',
       formation TEXT NOT NULL DEFAULT '1-2-3-1',
       periods INTEGER NOT NULL DEFAULT 2,
+      duration_minutes INTEGER NOT NULL DEFAULT 60,
+      sub_moments INTEGER NOT NULL DEFAULT 2,
       present_players TEXT NOT NULL DEFAULT '[]',
       no_sub_players TEXT NOT NULL DEFAULT '[]',
       lineup TEXT NOT NULL DEFAULT '[]',
@@ -59,6 +61,8 @@ async function migrate() {
       FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
     )
   `;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 60`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS sub_moments INTEGER NOT NULL DEFAULT 2`;
   await sql`
     CREATE TABLE IF NOT EXISTS gameplans (
       match_id TEXT PRIMARY KEY,

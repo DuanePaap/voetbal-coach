@@ -42,7 +42,7 @@ const MatchModel = (() => {
 
   async function _rebuildLineupFromMatch(m) {
     if (!m?.lineup?.length) return m;
-    const matchMinutes = 60;
+    const matchMinutes = m.duration || 60;
     const initialSlots = m.lineup.filter(l => l.startMinute === 0);
     const lineupMap = {};
     initialSlots.forEach(slot => {
@@ -117,7 +117,8 @@ const MatchModel = (() => {
     return assignment;
   }
 
-  // Generate fair lineup with substitutions based on match.periods (2 or 4)
+  // Generate fair lineup with substitutions spread evenly over match.duration,
+  // based on match.subMoments (aantal wisselmomenten) — decoupled from match.periods (rustmomenten)
   function generateLineup(match, players) {
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     if (!formation) return null;
@@ -125,14 +126,14 @@ const MatchModel = (() => {
     const positions = formation.positions;
     const numOnField = positions.length;
     const present = players.filter(p => match.presentPlayers.includes(p.id));
-    const matchMinutes = 60;
-    const numPeriods = match.periods || 2;
+    const matchMinutes = match.duration || 60;
+    const numSubMoments = match.subMoments || 2;
 
     if (present.length < numOnField) return null;
 
-    const periodLen = matchMinutes / numPeriods;
+    const intervalLen = matchMinutes / numSubMoments;
     const subMinutes = [];
-    for (let i = 1; i < numPeriods; i++) subMinutes.push(Math.round(i * periodLen));
+    for (let i = 1; i < numSubMoments; i++) subMinutes.push(Math.round(i * intervalLen));
 
     const noSub = new Set(match.noSubPlayers || []);
     const noSubPresent = present.filter(p => noSub.has(p.id));

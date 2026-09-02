@@ -1,14 +1,25 @@
 'use strict';
 const express = require('express');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { migrate, sql } = require('./db/database');
 
 const app = express();
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Te veel pogingen, probeer het later opnieuw' },
+});
+
 const authMiddleware = require('./middleware/auth');
-app.use('/api/auth',      require('./routes/auth'));
+app.use('/api/auth',      authLimiter,                 require('./routes/auth'));
 app.use('/api/players',   authMiddleware,              require('./routes/players'));
 app.use('/api/matches',   authMiddleware,              require('./routes/matches'));
 app.use('/api/gameplans', authMiddleware,              require('./routes/gameplans'));

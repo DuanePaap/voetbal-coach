@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { randomUUID } = require('crypto');
 const { sql } = require('../db/database');
+const { getJwtSecret } = require('../middleware/jwtSecret');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'vc-secret-change-in-production';
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
     await sql`INSERT INTO coaches (id, email, password_hash, name, created_at)
               VALUES (${id}, ${emailLower}, ${hash}, ${nameTrimmed}, ${Date.now()})`;
 
-    const token = jwt.sign({ id, email: emailLower, name: nameTrimmed }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id, email: emailLower, name: nameTrimmed }, getJwtSecret(), { expiresIn: '30d' });
     res.json({ token, coach: { id, email: emailLower, name: nameTrimmed } });
   } catch (err) {
     console.error('Register error:', err);
@@ -44,7 +44,7 @@ router.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, coach.password_hash);
     if (!ok) return res.status(401).json({ error: 'Onjuist e-mailadres of wachtwoord' });
 
-    const token = jwt.sign({ id: coach.id, email: coach.email, name: coach.name }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: coach.id, email: coach.email, name: coach.name }, getJwtSecret(), { expiresIn: '30d' });
     res.json({ token, coach: { id: coach.id, email: coach.email, name: coach.name } });
   } catch (err) {
     console.error('Login error:', err);
@@ -68,7 +68,7 @@ router.post('/player-login', async (req, res) => {
 
     const token = jwt.sign(
       { type: 'player', id: row.player_id, coachId: row.coach_id, name: row.player_name },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '365d' }
     );
     res.json({ token, player: { id: row.player_id, name: row.player_name, photo: row.player_photo, coachId: row.coach_id } });

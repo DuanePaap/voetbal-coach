@@ -4,6 +4,12 @@ const { randomUUID } = require('crypto');
 const { sql } = require('../db/database');
 const router = express.Router();
 
+function clampInt(value, fallback, min, max) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 function parse(row) {
   if (!row) return null;
   return {
@@ -15,6 +21,8 @@ function parse(row) {
     fieldType: row.field_type,
     formation: row.formation,
     periods: row.periods,
+    duration: row.duration_minutes,
+    subMoments: row.sub_moments,
     presentPlayers:   JSON.parse(row.present_players   || '[]'),
     noSubPlayers:     JSON.parse(row.no_sub_players     || '[]'),
     lineup:           JSON.parse(row.lineup             || '[]'),
@@ -46,14 +54,17 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { opponent, date, location, fieldType, formation, periods, presentPlayers } = req.body;
+    const { opponent, date, location, fieldType, formation, periods, duration, subMoments, presentPlayers } = req.body;
     if (!opponent?.trim() || !date) return res.status(400).json({ error: 'Tegenstander en datum zijn verplicht' });
     const id = randomUUID();
+    const durationVal = clampInt(duration, 60, 10, 150);
+    const subMomentsVal = clampInt(subMoments, 2, 1, 10);
     const { rows: [row] } = await sql`
       INSERT INTO matches (id, coach_id, opponent, date, location, field_type, formation, periods,
-        present_players, no_sub_players, lineup, substitutions, position_overrides, created_at)
+        duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, created_at)
       VALUES (${id}, ${req.coach.id}, ${opponent.trim()}, ${date},
               ${location || 'thuis'}, ${fieldType || 'half'}, ${formation || '1-2-3-1'}, ${periods || 2},
+              ${durationVal}, ${subMomentsVal},
               ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'},
               ${Date.now()})
       RETURNING *
@@ -70,8 +81,10 @@ router.put('/:id', async (req, res) => {
     const { rows: [existing] } = await sql`SELECT id FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
-    const { opponent, date, location, fieldType, formation, periods,
+    const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
             presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides } = req.body;
+    const durationVal = clampInt(duration, 60, 10, 150);
+    const subMomentsVal = clampInt(subMoments, 2, 1, 10);
 
     const { rows: [row] } = await sql`
       UPDATE matches
@@ -81,6 +94,8 @@ router.put('/:id', async (req, res) => {
           field_type        = ${fieldType || 'half'},
           formation         = ${formation || '1-2-3-1'},
           periods           = ${periods || 2},
+          duration_minutes  = ${durationVal},
+          sub_moments       = ${subMomentsVal},
           present_players   = ${JSON.stringify(presentPlayers   || [])},
           no_sub_players    = ${JSON.stringify(noSubPlayers     || [])},
           lineup            = ${JSON.stringify(lineup           || [])},

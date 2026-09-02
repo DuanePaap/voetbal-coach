@@ -12,6 +12,7 @@ const MatchView = (() => {
             <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
             <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
             <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
+            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.duration || 60}′ &bull; ${m.subMoments || 2}× wisselen</span>
           </div>
         </div>
         <div class="match-card-actions">
@@ -70,6 +71,8 @@ const MatchView = (() => {
     fieldTypeEl.value = match?.fieldType || 'half';
 
     document.getElementById('match-periods').value = String(match?.periods || 2);
+    document.getElementById('match-duration').value = match?.duration || 60;
+    document.getElementById('match-sub-moments').value = match?.subMoments || 2;
 
     _renderFormationOptions(match?.fieldType || 'half', match?.formation);
     _renderPlayerChecklist(players, match?.presentPlayers || []);
@@ -114,6 +117,8 @@ const MatchView = (() => {
       formation: document.getElementById('match-formation').value,
       presentPlayers: checked,
       periods: parseInt(document.getElementById('match-periods').value) || 2,
+      duration: parseInt(document.getElementById('match-duration').value) || 60,
+      subMoments: parseInt(document.getElementById('match-sub-moments').value) || 2,
     };
   }
 
