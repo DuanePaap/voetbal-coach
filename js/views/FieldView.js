@@ -18,12 +18,6 @@ const FieldView = (() => {
     return '#64748b';
   }
 
-  // Light pos color for text contrast
-  function _posTextColor(code) {
-    if (code === 'GK') return '#422006';
-    return '#fff';
-  }
-
   function _fieldLines(full) {
     const g = _el('g', { fill: 'none', stroke: 'rgba(255,255,255,.55)', 'stroke-width': 1.5 });
     if (full) {
@@ -131,9 +125,6 @@ const FieldView = (() => {
     const firstName  = parts.length > 1 ? parts[0][0].toUpperCase() + '.' : '';
     const displayName = (firstName + ' ' + lastName).trim().slice(0, 12);
 
-    // GK label always goes below (into goal area) to avoid overlapping with defenders above
-    const labelAbove = pos.positionCode !== 'GK' && pos.y > 440;
-
     const g = _el('g', {
       class: 'player-pin-marker',
       'data-index': pos.positionIndex ?? '',
@@ -209,23 +200,18 @@ const FieldView = (() => {
       g.appendChild(_el('circle', { cx: 0, cy: 0, r: R, fill: 'none', stroke: col, 'stroke-width': 2.5, style: 'pointer-events:none' }));
     }
 
-    // ── Name pill + position badge ──
+    // ── Name pill, always below the avatar. Position is already conveyed by
+    // pitch placement + marker color, so only show a code badge when there's
+    // no name to identify an empty slot by. ──
     if (pos.playerName) {
-      const nameY  = labelAbove ? -(R + 22) : R + 10;
-      const badgeY = labelAbove ? -(R + 34) : R + 23;
-
+      const nameY = R + 10;
       const nw = Math.max(40, displayName.length * 5.6 + 10);
       g.appendChild(_el('rect', { x: -nw/2, y: nameY - 11, width: nw, height: 14, rx: 3, fill: 'rgba(0,0,0,.85)', style: 'pointer-events:none' }));
       const nameEl = _el('text', { x: 0, y: nameY, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': '800', fill: '#fff', 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
       nameEl.textContent = displayName;
       g.appendChild(nameEl);
-
-      g.appendChild(_el('rect', { x: -16, y: badgeY - 10, width: 32, height: 13, rx: 3, fill: col, style: 'pointer-events:none' }));
-      const posEl = _el('text', { x: 0, y: badgeY + 1, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': '900', fill: _posTextColor(pos.positionCode), 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
-      posEl.textContent = pos.positionCode;
-      g.appendChild(posEl);
     } else {
-      const badgeY = labelAbove ? -(R + 12) : R + 10;
+      const badgeY = R + 10;
       g.appendChild(_el('rect', { x: -16, y: badgeY - 10, width: 32, height: 13, rx: 3, fill: 'rgba(255,255,255,.15)', style: 'pointer-events:none' }));
       const posEl = _el('text', { x: 0, y: badgeY + 1, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': '900', fill: 'rgba(255,255,255,.6)', 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
       posEl.textContent = pos.positionCode;
