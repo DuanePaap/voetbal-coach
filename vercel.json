@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["index.html", "css/**", "js/**", "favicon.svg", "logo.svg"]
+        "includeFiles": ["index.html", "share.html", "css/**", "js/**", "favicon.svg", "logo.svg"]
       }
     }
   ],
