@@ -46,7 +46,7 @@ const LineupView = (() => {
           </button>
         </div>`;
     }).join('');
-    el.innerHTML = `<h4>Geen wissel</h4>${rows}`;
+    el.innerHTML = rows;
   }
 
   function renderPeriodNav(match) {
@@ -64,7 +64,7 @@ const LineupView = (() => {
   function renderSubstitutionTimeline(match, players) {
     const container = document.getElementById('substitution-timeline');
     if (!match?.substitutions?.length) {
-      container.innerHTML = '<h4>Wissels</h4><p style="font-size:.8rem;color:#aaa">Geen wissels gepland.</p>';
+      container.innerHTML = '<p style="font-size:.8rem;color:#aaa">Geen wissels gepland.</p>';
       return;
     }
     const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
@@ -74,7 +74,7 @@ const LineupView = (() => {
         <span class="sub-arrow">↑</span> ${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
         <small style="margin-left:auto;color:#888">${sub.minute}'</small>
       </div>`).join('');
-    container.innerHTML = `<h4>Wissels</h4>${rows}`;
+    container.innerHTML = rows;
   }
 
   // Editable "wie staat in welk blokje" matrix — players × wisselmomenten. `grid` is
@@ -140,7 +140,7 @@ const LineupView = (() => {
         </div>`;
     }).join('');
 
-    container.innerHTML = `<h4>Speeltijden</h4>${rows}`;
+    container.innerHTML = rows;
   }
 
   function getPositionsAtMinute(match, players, formation, minute) {

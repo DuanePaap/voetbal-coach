@@ -348,11 +348,22 @@
               <select id="lineup-match-select"></select>
             </div>
             <div id="lineup-info" class="lineup-info"></div>
-            <div id="no-sub-section" class="no-sub-section"></div>
             <div id="period-nav" class="period-nav"></div>
             <div id="switch-matrix"></div>
-            <div id="substitution-timeline" class="sub-timeline"></div>
-            <div id="bench-list" class="bench-list"></div>
+
+            <details class="lineup-fold">
+              <summary class="lineup-fold-summary">Geen wissel</summary>
+              <div id="no-sub-section" class="lineup-fold-body no-sub-section"></div>
+            </details>
+            <details class="lineup-fold">
+              <summary class="lineup-fold-summary">Wissels</summary>
+              <div id="substitution-timeline" class="lineup-fold-body sub-timeline"></div>
+            </details>
+            <details class="lineup-fold">
+              <summary class="lineup-fold-summary">Speeltijden</summary>
+              <div id="bench-list" class="lineup-fold-body bench-list"></div>
+            </details>
+
             <button class="btn btn-primary" id="btn-generate-lineup" style="width:100%;margin-top:12px;justify-content:center">
               &#x2699; Genereer opstelling
             </button>
