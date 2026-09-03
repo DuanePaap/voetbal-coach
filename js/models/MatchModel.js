@@ -150,6 +150,9 @@ const MatchModel = (() => {
   // (decoupled from match.periods, which is purely rustmomenten for display). Every
   // sub-eligible player rotates through the bench so total playing time stays as
   // equal as possible, with substitutions spread across every segment boundary.
+  // Respects match.segmentPins — coach-locked (segment, player) on/off choices from
+  // the switch matrix (e.g. deliberately benching someone at the start) survive
+  // regeneration; the remaining free slots are still filled as fairly as possible.
   function generateLineup(match, players) {
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     if (!formation) return null;
@@ -172,17 +175,16 @@ const MatchModel = (() => {
     const subEligible  = present.filter(p => !noSub.has(p.id));
     const slotsForSubs = numOnField - noSubPresent.length;
 
-    // Sort sub-eligible: best peak fit first → they form the initial XI
+    // Sort sub-eligible: best peak fit first → tie-breaker when nobody has played yet
     const sortedByFit = [...subEligible].sort((a, b) => {
       const aFit = Math.max(...positions.map(p => score(a, p.code)));
       const bFit = Math.max(...positions.map(p => score(b, p.code)));
       return bFit - aFit;
     });
+    const fitRank = new Map(sortedByFit.map((p, i) => [p.id, i]));
 
-    const n = sortedByFit.length;
-    const sitOutPerSegment = Math.max(0, n - slotsForSubs);
-
-    if (sitOutPerSegment === 0) {
+    const n = subEligible.length;
+    if (n <= slotsForSubs) {
       // Everyone fits on the field at once — no rotation needed
       const assignment = assignPlayers(present, positions);
       const lineup = assignment.map(({ player, pos }) => ({
@@ -192,15 +194,40 @@ const MatchModel = (() => {
       return { lineup, substitutions: [] };
     }
 
-    // Who's on the field for each segment: rotate the sit-out window through the
-    // whole squad so every player sits out (roughly) the same number of segments.
+    // Coach-locked cells from the switch matrix, grouped per segment
+    const pinsPerSegment = segmentBounds.slice(0, -1).map(() => new Map());
+    (match.segmentPins || []).forEach(p => {
+      if (pinsPerSegment[p.segment] && subEligible.some(pl => pl.id === p.playerId)) {
+        pinsPerSegment[p.segment].set(p.playerId, p.on);
+      }
+    });
+
+    // Greedy fair rotation: pinned players are forced first, then the remaining free
+    // slots go to whoever has played the fewest minutes so far — this keeps total
+    // playing time as balanced as possible even around irregular pins.
+    const minutesPlayed = {};
+    subEligible.forEach(p => { minutesPlayed[p.id] = 0; });
+
     const segmentsOnField = [];
-    let cursor = slotsForSubs % n;
     for (let s = 0; s < numSegments; s++) {
-      const sitOut = new Set();
-      for (let k = 0; k < sitOutPerSegment; k++) sitOut.add(sortedByFit[(cursor + k) % n].id);
-      cursor = (cursor + sitOutPerSegment) % n;
-      segmentsOnField.push(sortedByFit.filter(p => !sitOut.has(p.id)));
+      const segMinutes = segmentBounds[s + 1] - segmentBounds[s];
+      const segPins = pinsPerSegment[s];
+      const pinnedOn  = subEligible.filter(p => segPins.get(p.id) === true);
+      const pinnedOff = new Set(subEligible.filter(p => segPins.get(p.id) === false).map(p => p.id));
+      const pinnedOnIds = new Set(pinnedOn.map(p => p.id));
+
+      const freePool = subEligible.filter(p => !pinnedOnIds.has(p.id) && !pinnedOff.has(p.id));
+      const freeSlots = Math.max(0, Math.min(slotsForSubs - pinnedOn.length, freePool.length));
+
+      const chosen = [...freePool]
+        .sort((a, b) => (minutesPlayed[a.id] - minutesPlayed[b.id]) || (fitRank.get(a.id) - fitRank.get(b.id)))
+        .slice(0, freeSlots);
+
+      const onField = [...pinnedOn, ...chosen];
+      if (onField.length < slotsForSubs) return null; // te veel vergrendelingen om dit blok te vullen
+
+      segmentsOnField.push(onField);
+      onField.forEach(p => { minutesPlayed[p.id] += segMinutes; });
     }
 
     return _buildFromSegments(noSubPresent, segmentsOnField, positions, segmentBounds);
@@ -235,18 +262,36 @@ const MatchModel = (() => {
       grid.push(new Set(onIds));
     }
 
-    return { numSegments, bounds, noSubPresent, subEligible, required, grid };
+    // Pins per segment: Map<playerId, boolean> — loaded so the matrix can show
+    // which cells are already locked from a previous generate/apply.
+    const pins = bounds.slice(0, -1).map(() => new Map());
+    (match.segmentPins || []).forEach(p => {
+      if (pins[p.segment] && subEligible.some(pl => pl.id === p.playerId)) pins[p.segment].set(p.playerId, p.on);
+    });
+
+    return { numSegments, bounds, noSubPresent, subEligible, required, grid, pins };
   }
 
-  // Rebuild the lineup from a coach-edited segment grid (see getSegmentInfo).
-  async function applySegmentGrid(matchId, segmentInfo, grid) {
+  // Rebuild the lineup from a coach-edited segment grid (see getSegmentInfo). `pins`
+  // is an array of Map<playerId, boolean> (one per segment) — the locked subset of
+  // `grid` that should survive a future "Genereer opstelling".
+  async function applySegmentGrid(matchId, segmentInfo, grid, pins) {
     const match = await getById(matchId);
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     if (!formation) return null;
     const { bounds, noSubPresent, subEligible } = segmentInfo;
     const segmentsOnField = grid.map(idSet => subEligible.filter(p => idSet.has(p.id)));
+    // Every segment must fill exactly the number of positions on the field — the UI
+    // already disables "Toepassen" otherwise, this is a defensive backstop.
+    if (segmentsOnField.some(onField => noSubPresent.length + onField.length !== formation.positions.length)) return null;
     const { lineup, substitutions } = _buildFromSegments(noSubPresent, segmentsOnField, formation.positions, bounds);
-    return save({ ...match, lineup, substitutions });
+
+    const segmentPins = [];
+    (pins || []).forEach((segMap, segIdx) => {
+      segMap.forEach((on, playerId) => segmentPins.push({ segment: segIdx, playerId, on }));
+    });
+
+    return save({ ...match, lineup, substitutions, segmentPins });
   }
 
   return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, swapLineupPlayers, getShareLink };

@@ -10,6 +10,15 @@ function clampInt(value, fallback, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
+// Coach-authored pins on the switch matrix: { segment, playerId, on } — force a
+// player on/off the field for one segment, surviving future "Genereer opstelling".
+function sanitizePins(pins) {
+  if (!Array.isArray(pins)) return [];
+  return pins
+    .filter(p => p && typeof p.playerId === 'string' && Number.isInteger(p.segment) && p.segment >= 0 && typeof p.on === 'boolean')
+    .map(p => ({ segment: p.segment, playerId: p.playerId, on: p.on }));
+}
+
 function parse(row) {
   if (!row) return null;
   return {
@@ -23,6 +32,7 @@ function parse(row) {
     periods: row.periods,
     duration: row.duration_minutes,
     subMoments: row.sub_moments,
+    segmentPins:      JSON.parse(row.segment_pins       || '[]'),
     presentPlayers:   JSON.parse(row.present_players   || '[]'),
     noSubPlayers:     JSON.parse(row.no_sub_players     || '[]'),
     lineup:           JSON.parse(row.lineup             || '[]'),
@@ -61,11 +71,11 @@ router.post('/', async (req, res) => {
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
     const { rows: [row] } = await sql`
       INSERT INTO matches (id, coach_id, opponent, date, location, field_type, formation, periods,
-        duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, created_at)
+        duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, segment_pins, created_at)
       VALUES (${id}, ${req.coach.id}, ${opponent.trim()}, ${date},
               ${location || 'thuis'}, ${fieldType || 'half'}, ${formation || '1-2-3-1'}, ${periods || 2},
               ${durationVal}, ${subMomentsVal},
-              ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'},
+              ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'}, ${'[]'},
               ${Date.now()})
       RETURNING *
     `;
@@ -82,7 +92,7 @@ router.put('/:id', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
-            presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides } = req.body;
+            presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides, segmentPins } = req.body;
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
 
@@ -100,7 +110,8 @@ router.put('/:id', async (req, res) => {
           no_sub_players    = ${JSON.stringify(noSubPlayers     || [])},
           lineup            = ${JSON.stringify(lineup           || [])},
           substitutions     = ${JSON.stringify(substitutions    || [])},
-          position_overrides= ${JSON.stringify(positionOverrides|| {})}
+          position_overrides= ${JSON.stringify(positionOverrides|| {})},
+          segment_pins      = ${JSON.stringify(sanitizePins(segmentPins))}
       WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}
       RETURNING *
     `;

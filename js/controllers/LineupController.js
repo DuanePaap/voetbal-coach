@@ -6,6 +6,7 @@ const LineupController = (() => {
   let _cachedPlayers = null;
   let _segmentInfo = null;
   let _grid = null;
+  let _pins = null; // array (per segment) of Map<playerId, boolean> — locked cells
 
   async function init() {
     const select = document.getElementById('lineup-match-select');
@@ -51,6 +52,7 @@ const LineupController = (() => {
     _cachedPlayers = players;
     _segmentInfo = match ? MatchModel.getSegmentInfo(match, players) : null;
     _grid = _segmentInfo ? _segmentInfo.grid.map(s => new Set(s)) : null;
+    _pins = _segmentInfo ? _segmentInfo.pins.map(m => new Map(m)) : null;
 
     LineupView.renderInfo(match, players);
     LineupView.renderNoSubPicker(match, players);
@@ -64,19 +66,33 @@ const LineupController = (() => {
 
   function _renderMatrix() {
     if (!_cachedMatch || !_segmentInfo) return;
-    LineupView.renderSwitchMatrix(_cachedMatch, _cachedPlayers, _segmentInfo, _grid);
+    LineupView.renderSwitchMatrix(_cachedMatch, _cachedPlayers, _segmentInfo, _grid, _pins);
   }
 
+  // Tap cycle per cell: uit → aan → aan (vast 📌) → uit (vast 📌) → uit …
+  // Vastgezette cellen overleven een volgende "Genereer opstelling".
   function toggleMatrixCell(segIdx, playerId) {
-    if (!_grid) return;
-    const segSet = _grid[segIdx];
-    if (segSet.has(playerId)) segSet.delete(playerId); else segSet.add(playerId);
+    if (!_grid || !_pins) return;
+    const on = _grid[segIdx].has(playerId);
+    const pinned = _pins[segIdx].has(playerId);
+
+    if (!on && !pinned) {
+      _grid[segIdx].add(playerId);
+    } else if (on && !pinned) {
+      _pins[segIdx].set(playerId, true);
+    } else if (on && pinned) {
+      _grid[segIdx].delete(playerId);
+      _pins[segIdx].set(playerId, false);
+    } else {
+      _pins[segIdx].delete(playerId);
+    }
     _renderMatrix();
   }
 
   async function applyMatrix() {
     if (!_currentMatchId || !_grid) return;
-    await MatchModel.applySegmentGrid(_currentMatchId, _segmentInfo, _grid);
+    const result = await MatchModel.applySegmentGrid(_currentMatchId, _segmentInfo, _grid, _pins);
+    if (!result) return alert('Kon de opstelling niet bijwerken — controleer of elk blok het juiste aantal spelers heeft.');
     _currentMinute = 0;
     await _renderAll();
   }
@@ -132,7 +148,7 @@ const LineupController = (() => {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
     const [match, players] = await Promise.all([MatchModel.getById(_currentMatchId), PlayerModel.getAll()]);
     const result = MatchModel.generateLineup(match, players);
-    if (!result) return alert('Niet genoeg spelers voor de opstelling. Voeg meer aanwezige spelers toe.');
+    if (!result) return alert('Niet genoeg spelers voor de opstelling — voeg meer aanwezige spelers toe of pas de vergrendelingen in de matrix aan.');
     await MatchModel.saveLineup(_currentMatchId, result.lineup, result.substitutions);
     _currentMinute = 0;
     await _renderAll();

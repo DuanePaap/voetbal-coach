@@ -77,10 +77,12 @@ const LineupView = (() => {
     container.innerHTML = rows;
   }
 
-  // Editable "wie staat in welk blokje" matrix — players × wisselmomenten. `grid` is
-  // an array (one Set<playerId> per segment) owned by the controller; this function
-  // only renders it and wires click handlers back to LineupController.
-  function renderSwitchMatrix(match, players, segmentInfo, grid) {
+  // Editable "wie staat in welk blokje" matrix — players × wisselmomenten. `grid`
+  // (one Set<playerId> per segment) and `pins` (one Map<playerId, boolean> per
+  // segment, for locked cells) are owned by the controller; this function only
+  // renders them and wires click handlers back to LineupController. Tap cycle per
+  // cell: uit → aan → aan+vast (📌) → uit+vast (📌) → uit.
+  function renderSwitchMatrix(match, players, segmentInfo, grid, pins) {
     const el = document.getElementById('switch-matrix');
     if (!el) return;
     const { numSegments, bounds, noSubPresent, subEligible, required } = segmentInfo;
@@ -93,7 +95,9 @@ const LineupView = (() => {
     const rows = subEligible.map(p => {
       const cells = grid.map((segSet, i) => {
         const on = segSet.has(p.id);
-        return `<button type="button" class="matrix-cell${on ? ' on' : ''}" onclick="LineupController.toggleMatrixCell(${i}, '${p.id}')"></button>`;
+        const isPinned = pins[i].has(p.id);
+        const cls = ['matrix-cell', on ? 'on' : '', isPinned ? 'pinned' : ''].filter(Boolean).join(' ');
+        return `<button type="button" class="${cls}" onclick="LineupController.toggleMatrixCell(${i}, '${p.id}')" title="${isPinned ? 'Vergrendeld — tik om te ontgrendelen' : 'Tik om te wisselen, nogmaals tikken = vergrendelen'}"></button>`;
       }).join('');
       return `<div class="matrix-row"><span class="matrix-name">${p.name.split(' ')[0]}</span>${cells}</div>`;
     }).join('');
@@ -103,13 +107,14 @@ const LineupView = (() => {
       `<span class="matrix-count${s.size !== required ? ' bad' : ''}">${s.size}/${required}</span>`).join('');
 
     el.innerHTML = `
-      <h4>Wie staat wanneer? <span class="matrix-hint-inline">(tik om te wisselen)</span></h4>
+      <h4>Wie staat wanneer? <span class="matrix-hint-inline">(tik voor aan/uit, nogmaals = 📌 vast)</span></h4>
       <div class="matrix-grid" style="--matrix-cols:${numSegments}">
         <div class="matrix-row matrix-header"><span class="matrix-name"></span>${header}</div>
         ${rows}
         <div class="matrix-row matrix-footer"><span class="matrix-name">Op veld</span>${counts}</div>
       </div>
       ${noSubPresent.length ? `<p class="matrix-hint">🔒 ${noSubPresent.map(p => p.name.split(' ')[0]).join(', ')} sta${noSubPresent.length === 1 ? 'at' : 'an'} altijd op het veld.</p>` : ''}
+      <p class="matrix-hint">📌 Vergrendelde vakjes blijven ook staan na een nieuwe "Genereer opstelling".</p>
       <button type="button" class="btn btn-primary matrix-apply" onclick="LineupController.applyMatrix()" ${badCols ? 'disabled' : ''}>
         ${badCols ? `✓ Toepassen (${badCols} blok${badCols !== 1 ? 'ken' : ''} klopt niet)` : '✓ Toepassen'}
       </button>`;
