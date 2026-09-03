@@ -70,23 +70,38 @@ const LineupController = (() => {
   }
 
   // Tap cycle per cell: uit → aan → aan (vast 📌) → uit (vast 📌) → uit …
-  // Vastgezette cellen overleven een volgende "Genereer opstelling".
-  function toggleMatrixCell(segIdx, playerId) {
+  // Vergrendelen/ontgrendelen wordt meteen opgeslagen (los van "Toepassen"), zodat
+  // een 📌 nooit stilletjes verloren gaat als de coach de pagina verlaat zonder op
+  // Toepassen te klikken.
+  async function toggleMatrixCell(segIdx, playerId) {
     if (!_grid || !_pins) return;
     const on = _grid[segIdx].has(playerId);
     const pinned = _pins[segIdx].has(playerId);
+    let pinChanged = false;
 
     if (!on && !pinned) {
       _grid[segIdx].add(playerId);
     } else if (on && !pinned) {
       _pins[segIdx].set(playerId, true);
+      pinChanged = true;
     } else if (on && pinned) {
       _grid[segIdx].delete(playerId);
       _pins[segIdx].set(playerId, false);
+      pinChanged = true;
     } else {
       _pins[segIdx].delete(playerId);
+      pinChanged = true;
     }
     _renderMatrix();
+
+    if (pinChanged) {
+      try {
+        await MatchModel.saveSegmentPins(_currentMatchId, _pins);
+      } catch (err) {
+        console.error(err);
+        alert('Vergrendelen opslaan is mislukt — controleer je verbinding en probeer opnieuw.');
+      }
+    }
   }
 
   async function applyMatrix() {

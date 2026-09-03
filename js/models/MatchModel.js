@@ -272,6 +272,22 @@ const MatchModel = (() => {
     return { numSegments, bounds, noSubPresent, subEligible, required, grid, pins };
   }
 
+  // `pins` (array of Map<playerId, boolean>, one per segment) → serializable form
+  function _pinsToArray(pins) {
+    const segmentPins = [];
+    (pins || []).forEach((segMap, segIdx) => {
+      segMap.forEach((on, playerId) => segmentPins.push({ segment: segIdx, playerId, on }));
+    });
+    return segmentPins;
+  }
+
+  // Persist just the locked cells — called the moment a cell is (un)pinned, so a
+  // lock survives a page revisit even if the coach never clicks "Toepassen".
+  async function saveSegmentPins(matchId, pins) {
+    const m = await getById(matchId);
+    return save({ ...m, segmentPins: _pinsToArray(pins) });
+  }
+
   // Rebuild the lineup from a coach-edited segment grid (see getSegmentInfo). `pins`
   // is an array of Map<playerId, boolean> (one per segment) — the locked subset of
   // `grid` that should survive a future "Genereer opstelling".
@@ -286,13 +302,8 @@ const MatchModel = (() => {
     if (segmentsOnField.some(onField => noSubPresent.length + onField.length !== formation.positions.length)) return null;
     const { lineup, substitutions } = _buildFromSegments(noSubPresent, segmentsOnField, formation.positions, bounds);
 
-    const segmentPins = [];
-    (pins || []).forEach((segMap, segIdx) => {
-      segMap.forEach((on, playerId) => segmentPins.push({ segment: segIdx, playerId, on }));
-    });
-
-    return save({ ...match, lineup, substitutions, segmentPins });
+    return save({ ...match, lineup, substitutions, segmentPins: _pinsToArray(pins) });
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, swapLineupPlayers, getShareLink };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, saveSegmentPins, swapLineupPlayers, getShareLink };
 })();

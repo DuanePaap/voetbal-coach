@@ -114,7 +114,7 @@ const LineupView = (() => {
         <div class="matrix-row matrix-footer"><span class="matrix-name">Op veld</span>${counts}</div>
       </div>
       ${noSubPresent.length ? `<p class="matrix-hint">🔒 ${noSubPresent.map(p => p.name.split(' ')[0]).join(', ')} sta${noSubPresent.length === 1 ? 'at' : 'an'} altijd op het veld.</p>` : ''}
-      <p class="matrix-hint">📌 Vergrendelde vakjes blijven ook staan na een nieuwe "Genereer opstelling".</p>
+      <p class="matrix-hint">📌 Vergrendelen wordt direct opgeslagen en blijft staan na een nieuwe "Genereer opstelling". Klik op Toepassen om de opstelling zelf bij te werken.</p>
       <button type="button" class="btn btn-primary matrix-apply" onclick="LineupController.applyMatrix()" ${badCols ? 'disabled' : ''}>
         ${badCols ? `✓ Toepassen (${badCols} blok${badCols !== 1 ? 'ken' : ''} klopt niet)` : '✓ Toepassen'}
       </button>`;
