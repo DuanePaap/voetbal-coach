@@ -68,30 +68,51 @@ const LineupView = (() => {
       return;
     }
     const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
-    const opts = present.map(p => `<option value="${p.id}">${p.name.split(' ')[0]} (#${p.number || '?'})</option>`).join('');
-
-    const rows = match.substitutions.map((sub, idx) => `
-      <div class="sub-row" id="sub-row-${idx}">
-        <div class="sub-display">
-          <span class="sub-arrow">↓</span> ${present.find(p=>p.id===sub.playerOut)?.name?.split(' ')[0]||'?'}
-          <span class="sub-arrow">↑</span> ${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
-          <small style="margin-left:auto;color:#888">${sub.minute}'</small>
-          <button class="btn-sub-edit" onclick="LineupController.editSub(${idx})" title="Aanpassen">✏️</button>
-        </div>
-        <div class="sub-edit-form" style="display:none">
-          <div style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--text-muted);margin-bottom:2px">
-            <span>↓ eraf</span><span style="margin-left:auto">${sub.minute}'</span>
-          </div>
-          <select id="sub-out-${idx}" class="sub-edit-select">${opts}</select>
-          <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;margin-bottom:2px">↑ erbij</div>
-          <select id="sub-in-${idx}" class="sub-edit-select">${opts}</select>
-          <div style="display:flex;gap:6px;margin-top:6px">
-            <button class="btn btn-primary" style="flex:1;font-size:.75rem;padding:4px 0" onclick="LineupController.saveSub(${idx})">Opslaan</button>
-            <button class="btn btn-secondary" style="flex:1;font-size:.75rem;padding:4px 0" onclick="LineupController.cancelSub()">Annuleer</button>
-          </div>
-        </div>
+    const rows = match.substitutions.map(sub => `
+      <div class="sub-row">
+        <span class="sub-arrow">↓</span> ${present.find(p=>p.id===sub.playerOut)?.name?.split(' ')[0]||'?'}
+        <span class="sub-arrow">↑</span> ${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
+        <small style="margin-left:auto;color:#888">${sub.minute}'</small>
       </div>`).join('');
     container.innerHTML = `<h4>Wissels</h4>${rows}`;
+  }
+
+  // Editable "wie staat in welk blokje" matrix — players × wisselmomenten. `grid` is
+  // an array (one Set<playerId> per segment) owned by the controller; this function
+  // only renders it and wires click handlers back to LineupController.
+  function renderSwitchMatrix(match, players, segmentInfo, grid) {
+    const el = document.getElementById('switch-matrix');
+    if (!el) return;
+    const { numSegments, bounds, noSubPresent, subEligible, required } = segmentInfo;
+
+    if (numSegments < 2 || subEligible.length <= required) { el.innerHTML = ''; return; }
+
+    const header = bounds.slice(0, -1).map(min =>
+      `<span class="matrix-col-label">${min}'</span>`).join('');
+
+    const rows = subEligible.map(p => {
+      const cells = grid.map((segSet, i) => {
+        const on = segSet.has(p.id);
+        return `<button type="button" class="matrix-cell${on ? ' on' : ''}" onclick="LineupController.toggleMatrixCell(${i}, '${p.id}')"></button>`;
+      }).join('');
+      return `<div class="matrix-row"><span class="matrix-name">${p.name.split(' ')[0]}</span>${cells}</div>`;
+    }).join('');
+
+    const badCols = grid.reduce((n, s) => n + (s.size !== required ? 1 : 0), 0);
+    const counts = grid.map(s =>
+      `<span class="matrix-count${s.size !== required ? ' bad' : ''}">${s.size}/${required}</span>`).join('');
+
+    el.innerHTML = `
+      <h4>Wie staat wanneer? <span class="matrix-hint-inline">(tik om te wisselen)</span></h4>
+      <div class="matrix-grid" style="--matrix-cols:${numSegments}">
+        <div class="matrix-row matrix-header"><span class="matrix-name"></span>${header}</div>
+        ${rows}
+        <div class="matrix-row matrix-footer"><span class="matrix-name">Op veld</span>${counts}</div>
+      </div>
+      ${noSubPresent.length ? `<p class="matrix-hint">🔒 ${noSubPresent.map(p => p.name.split(' ')[0]).join(', ')} sta${noSubPresent.length === 1 ? 'at' : 'an'} altijd op het veld.</p>` : ''}
+      <button type="button" class="btn btn-primary matrix-apply" onclick="LineupController.applyMatrix()" ${badCols ? 'disabled' : ''}>
+        ${badCols ? `✓ Toepassen (${badCols} blok${badCols !== 1 ? 'ken' : ''} klopt niet)` : '✓ Toepassen'}
+      </button>`;
   }
 
   function renderBench(match, players) {
@@ -145,5 +166,5 @@ const LineupView = (() => {
     });
   }
 
-  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderBench, getPositionsAtMinute };
+  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, getPositionsAtMinute };
 })();

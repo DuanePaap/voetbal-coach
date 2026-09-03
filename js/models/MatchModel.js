@@ -45,43 +45,6 @@ const MatchModel = (() => {
     return save({ ...m, lineup });
   }
 
-  async function _rebuildLineupFromMatch(m) {
-    if (!m?.lineup?.length) return m;
-    const matchMinutes = m.duration || 60;
-    const initialSlots = m.lineup.filter(l => l.startMinute === 0);
-    const lineupMap = {};
-    initialSlots.forEach(slot => {
-      lineupMap[slot.playerId] = [{
-        startMinute: 0, endMinute: matchMinutes,
-        positionCode: slot.positionCode, positionIndex: slot.positionIndex,
-      }];
-    });
-    const subs = [...(m.substitutions || [])].sort((a, b) => a.minute - b.minute);
-    subs.forEach(sub => {
-      const outSlots = lineupMap[sub.playerOut];
-      if (!outSlots) return;
-      const outSlot = outSlots[outSlots.length - 1];
-      if (!outSlot || outSlot.endMinute <= sub.minute) return;
-      outSlot.endMinute = sub.minute;
-      if (!lineupMap[sub.playerIn]) lineupMap[sub.playerIn] = [];
-      lineupMap[sub.playerIn].push({
-        startMinute: sub.minute, endMinute: matchMinutes,
-        positionCode: outSlot.positionCode, positionIndex: outSlot.positionIndex,
-      });
-    });
-    const lineup = [];
-    Object.entries(lineupMap).forEach(([playerId, slots]) => slots.forEach(slot => lineup.push({ playerId, ...slot })));
-    return save({ ...m, lineup });
-  }
-
-  async function overrideSubstitution(matchId, subIdx, playerOut, playerIn) {
-    const m = await getById(matchId);
-    if (!m?.substitutions?.[subIdx]) return null;
-    const subs = [...m.substitutions];
-    subs[subIdx] = { ...subs[subIdx], playerOut, playerIn };
-    return _rebuildLineupFromMatch({ ...m, substitutions: subs });
-  }
-
   // Score player fit for a position — uses mainPosition + preferredPositions combined
   function score(player, posCode) {
     const prefs = player.preferredPositions || [];
@@ -120,6 +83,67 @@ const MatchModel = (() => {
       if (best) { assignment.push({ player: best, pos }); used.add(best.id); }
     }
     return assignment;
+  }
+
+  // Build lineup + substitutions from a fixed per-segment on-field roster. Shared by
+  // generateLineup (auto fair rotation) and applySegmentGrid (manual matrix edits) —
+  // continuing players simply extend their slot, leaving/entering players are paired
+  // by best positional fit so the vacated position + color stays put.
+  function _buildFromSegments(noSubPresent, segmentsOnField, positions, segmentBounds) {
+    const numSegments = segmentsOnField.length;
+    const lineupMap = {};
+    const currentPos = {}; // playerId -> { code, index }
+    const initialAssignment = assignPlayers([...noSubPresent, ...segmentsOnField[0]], positions);
+    initialAssignment.forEach(({ player, pos }) => {
+      const positionIndex = positions.indexOf(pos);
+      currentPos[player.id] = { code: pos.code, index: positionIndex };
+      lineupMap[player.id] = [{ startMinute: segmentBounds[0], endMinute: segmentBounds[1], positionCode: pos.code, positionIndex }];
+    });
+
+    const substitutions = [];
+
+    for (let s = 1; s < numSegments; s++) {
+      const start = segmentBounds[s];
+      const end = segmentBounds[s + 1];
+      const prevIds = new Set(segmentsOnField[s - 1].map(p => p.id));
+      const currIds = new Set(segmentsOnField[s].map(p => p.id));
+
+      // Players continuing from the previous segment simply extend their slot
+      const continuing = [...noSubPresent, ...segmentsOnField[s].filter(p => prevIds.has(p.id))];
+      continuing.forEach(p => {
+        const last = lineupMap[p.id].slice(-1)[0];
+        if (last.endMinute === start) last.endMinute = end;
+        else lineupMap[p.id].push({ startMinute: start, endMinute: end, positionCode: last.positionCode, positionIndex: last.positionIndex });
+      });
+
+      // Match each leaving player's vacated position to the best-fit entering player
+      const leaving  = segmentsOnField[s - 1].filter(p => !currIds.has(p.id));
+      const entering = [...segmentsOnField[s].filter(p => !prevIds.has(p.id))];
+
+      leaving.forEach(playerOut => {
+        const vacated = currentPos[playerOut.id];
+        let bestIdx = -1, bestScore = -Infinity;
+        entering.forEach((p, idx) => {
+          const sc = score(p, vacated.code);
+          if (sc > bestScore) { bestScore = sc; bestIdx = idx; }
+        });
+        if (bestIdx === -1) return;
+        const playerIn = entering.splice(bestIdx, 1)[0];
+
+        substitutions.push({ minute: start, playerOut: playerOut.id, playerIn: playerIn.id });
+        const newSlot = { startMinute: start, endMinute: end, positionCode: vacated.code, positionIndex: vacated.index };
+        if (lineupMap[playerIn.id]) lineupMap[playerIn.id].push(newSlot); else lineupMap[playerIn.id] = [newSlot];
+        currentPos[playerIn.id] = vacated;
+        delete currentPos[playerOut.id];
+      });
+    }
+
+    const lineup = [];
+    Object.entries(lineupMap).forEach(([playerId, slots]) => {
+      slots.forEach(slot => lineup.push({ playerId, ...slot }));
+    });
+
+    return { lineup, substitutions };
   }
 
   // Generate a fair lineup: the match is split into match.subMoments equal segments
@@ -179,61 +203,51 @@ const MatchModel = (() => {
       segmentsOnField.push(sortedByFit.filter(p => !sitOut.has(p.id)));
     }
 
-    // Segment 0: fresh greedy assignment for the initial XI
-    const lineupMap = {};
-    const currentPos = {}; // playerId -> { code, index }
-    const initialAssignment = assignPlayers([...noSubPresent, ...segmentsOnField[0]], positions);
-    initialAssignment.forEach(({ player, pos }) => {
-      const positionIndex = positions.indexOf(pos);
-      currentPos[player.id] = { code: pos.code, index: positionIndex };
-      lineupMap[player.id] = [{ startMinute: segmentBounds[0], endMinute: segmentBounds[1], positionCode: pos.code, positionIndex }];
-    });
-
-    const substitutions = [];
-
-    for (let s = 1; s < numSegments; s++) {
-      const start = segmentBounds[s];
-      const end = segmentBounds[s + 1];
-      const prevIds = new Set(segmentsOnField[s - 1].map(p => p.id));
-      const currIds = new Set(segmentsOnField[s].map(p => p.id));
-
-      // Players continuing from the previous segment simply extend their slot
-      const continuing = [...noSubPresent, ...segmentsOnField[s].filter(p => prevIds.has(p.id))];
-      continuing.forEach(p => {
-        const last = lineupMap[p.id].slice(-1)[0];
-        if (last.endMinute === start) last.endMinute = end;
-        else lineupMap[p.id].push({ startMinute: start, endMinute: end, positionCode: last.positionCode, positionIndex: last.positionIndex });
-      });
-
-      // Match each leaving player's vacated position to the best-fit entering player
-      const leaving  = segmentsOnField[s - 1].filter(p => !currIds.has(p.id));
-      const entering = [...segmentsOnField[s].filter(p => !prevIds.has(p.id))];
-
-      leaving.forEach(playerOut => {
-        const vacated = currentPos[playerOut.id];
-        let bestIdx = -1, bestScore = -Infinity;
-        entering.forEach((p, idx) => {
-          const sc = score(p, vacated.code);
-          if (sc > bestScore) { bestScore = sc; bestIdx = idx; }
-        });
-        if (bestIdx === -1) return;
-        const playerIn = entering.splice(bestIdx, 1)[0];
-
-        substitutions.push({ minute: start, playerOut: playerOut.id, playerIn: playerIn.id });
-        const newSlot = { startMinute: start, endMinute: end, positionCode: vacated.code, positionIndex: vacated.index };
-        if (lineupMap[playerIn.id]) lineupMap[playerIn.id].push(newSlot); else lineupMap[playerIn.id] = [newSlot];
-        currentPos[playerIn.id] = vacated;
-        delete currentPos[playerOut.id];
-      });
-    }
-
-    const lineup = [];
-    Object.entries(lineupMap).forEach(([playerId, slots]) => {
-      slots.forEach(slot => lineup.push({ playerId, ...slot }));
-    });
-
-    return { lineup, substitutions };
+    return _buildFromSegments(noSubPresent, segmentsOnField, positions, segmentBounds);
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, overrideSubstitution, swapLineupPlayers, getShareLink };
+  // Derive the per-segment on/off matrix from the currently saved lineup, so the UI
+  // can show + edit "who's on the field in which block" directly.
+  function getSegmentInfo(match, players) {
+    const formation = FormationModel.getFormation(match.fieldType, match.formation);
+    const numOnField = formation?.positions?.length || 0;
+    const matchMinutes = match.duration || 60;
+    const numSegments = match.subMoments || 2;
+
+    const segLen = matchMinutes / numSegments;
+    const bounds = [0];
+    for (let i = 1; i < numSegments; i++) bounds.push(Math.round(i * segLen));
+    bounds.push(matchMinutes);
+
+    const noSub = new Set(match.noSubPlayers || []);
+    const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
+    const noSubPresent = present.filter(p => noSub.has(p.id));
+    const subEligible  = present.filter(p => !noSub.has(p.id));
+    const required = numOnField - noSubPresent.length;
+
+    const lineup = match.lineup || [];
+    const grid = [];
+    for (let s = 0; s < numSegments; s++) {
+      const start = bounds[s], end = bounds[s + 1];
+      const onIds = subEligible
+        .filter(p => lineup.some(l => l.playerId === p.id && l.startMinute <= start && l.endMinute >= end))
+        .map(p => p.id);
+      grid.push(new Set(onIds));
+    }
+
+    return { numSegments, bounds, noSubPresent, subEligible, required, grid };
+  }
+
+  // Rebuild the lineup from a coach-edited segment grid (see getSegmentInfo).
+  async function applySegmentGrid(matchId, segmentInfo, grid) {
+    const match = await getById(matchId);
+    const formation = FormationModel.getFormation(match.fieldType, match.formation);
+    if (!formation) return null;
+    const { bounds, noSubPresent, subEligible } = segmentInfo;
+    const segmentsOnField = grid.map(idSet => subEligible.filter(p => idSet.has(p.id)));
+    const { lineup, substitutions } = _buildFromSegments(noSubPresent, segmentsOnField, formation.positions, bounds);
+    return save({ ...match, lineup, substitutions });
+  }
+
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, swapLineupPlayers, getShareLink };
 })();

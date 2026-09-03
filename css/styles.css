@@ -718,6 +718,31 @@ details[open] .matches-played-summary::before { transform: rotate(90deg); }
 .period-btn:hover { border-color: var(--accent); color: var(--accent); }
 .period-btn.active { background: var(--accent); border-color: var(--accent); color: #070B10; }
 
+/* ── Switch matrix: who's on the field in which block ── */
+.matrix-hint-inline { font-weight: 400; color: var(--text-muted); font-size: .68rem; text-transform: none; letter-spacing: 0; }
+.matrix-grid { margin-bottom: 8px; overflow-x: auto; }
+.matrix-row {
+  display: grid; grid-template-columns: 1fr repeat(var(--matrix-cols, 4), 30px);
+  align-items: center; gap: 4px; padding: 3px 0;
+}
+.matrix-row.matrix-header, .matrix-row.matrix-footer { grid-template-columns: 1fr repeat(var(--matrix-cols, 4), 30px); }
+.matrix-name { font-size: .8rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matrix-col-label, .matrix-count {
+  font-size: .62rem; font-weight: 700; color: var(--text-muted); text-align: center;
+  text-transform: uppercase;
+}
+.matrix-count.bad { color: var(--red); }
+.matrix-cell {
+  width: 22px; height: 22px; border-radius: 50%; margin: 0 auto;
+  border: 1px solid var(--border-light); background: var(--bg-elevated);
+  cursor: pointer; padding: 0; transition: all .12s;
+}
+.matrix-cell:hover { border-color: var(--accent); }
+.matrix-cell.on { background: var(--accent); border-color: var(--accent); }
+.matrix-hint { font-size: .72rem; color: var(--text-muted); margin: 4px 0 8px; }
+.matrix-apply { width: 100%; justify-content: center; font-size: .8rem; }
+.matrix-apply:disabled { opacity: .5; cursor: not-allowed; }
+
 .sub-timeline { margin-bottom: 12px; }
 .sub-row {
   font-size: .82rem; color: var(--text-muted); display: flex; align-items: center;
@@ -725,18 +750,6 @@ details[open] .matches-played-summary::before { transform: rotate(90deg); }
 }
 .sub-row:last-child { border-bottom: none; }
 .sub-arrow { color: var(--accent); font-size: 1rem; }
-.sub-display { display: flex; align-items: center; gap: 6px; width: 100%; }
-.btn-sub-edit {
-  background: none; border: none; cursor: pointer; opacity: .45;
-  padding: 0 2px; font-size: .8rem; margin-left: auto; flex-shrink: 0;
-}
-.btn-sub-edit:hover { opacity: 1; }
-.sub-edit-form { width: 100%; padding: 4px 0 6px; }
-.sub-edit-select {
-  width: 100%; padding: 5px 6px; font-size: .8rem;
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text);
-}
 
 .bench-list { margin-bottom: 12px; }
 .bench-row {

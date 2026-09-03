@@ -2,6 +2,10 @@ const LineupController = (() => {
   let _currentMatchId = null;
   let _currentMinute = 0;
   let _selectedPosIndex = null;
+  let _cachedMatch = null;
+  let _cachedPlayers = null;
+  let _segmentInfo = null;
+  let _grid = null;
 
   async function init() {
     const select = document.getElementById('lineup-match-select');
@@ -43,25 +47,46 @@ const LineupController = (() => {
       MatchModel.getById(_currentMatchId),
       PlayerModel.getAll(),
     ]);
+    _cachedMatch = match;
+    _cachedPlayers = players;
+    _segmentInfo = match ? MatchModel.getSegmentInfo(match, players) : null;
+    _grid = _segmentInfo ? _segmentInfo.grid.map(s => new Set(s)) : null;
+
     LineupView.renderInfo(match, players);
     LineupView.renderNoSubPicker(match, players);
     LineupView.renderPeriodNav(match);
+    _renderMatrix();
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
     _selectedPosIndex = null;
-    await _renderField();
+    _renderField();
   }
 
-  async function _renderField() {
-    const [match, players] = await Promise.all([
-      MatchModel.getById(_currentMatchId),
-      PlayerModel.getAll(),
-    ]);
-    const formation = match ? FormationModel.getFormation(match.fieldType, match.formation) : null;
+  function _renderMatrix() {
+    if (!_cachedMatch || !_segmentInfo) return;
+    LineupView.renderSwitchMatrix(_cachedMatch, _cachedPlayers, _segmentInfo, _grid);
+  }
+
+  function toggleMatrixCell(segIdx, playerId) {
+    if (!_grid) return;
+    const segSet = _grid[segIdx];
+    if (segSet.has(playerId)) segSet.delete(playerId); else segSet.add(playerId);
+    _renderMatrix();
+  }
+
+  async function applyMatrix() {
+    if (!_currentMatchId || !_grid) return;
+    await MatchModel.applySegmentGrid(_currentMatchId, _segmentInfo, _grid);
+    _currentMinute = 0;
+    await _renderAll();
+  }
+
+  function _renderField() {
+    const formation = _cachedMatch ? FormationModel.getFormation(_cachedMatch.fieldType, _cachedMatch.formation) : null;
     const svgEl = document.getElementById('lineup-field');
-    if (match && formation) {
-      const positions = LineupView.getPositionsAtMinute(match, players, formation, _currentMinute);
-      FieldView.render(svgEl, positions, match.fieldType, null, {
+    if (_cachedMatch && formation) {
+      const positions = LineupView.getPositionsAtMinute(_cachedMatch, _cachedPlayers, formation, _currentMinute);
+      FieldView.render(svgEl, positions, _cachedMatch.fieldType, null, {
         cardMode: true,
         draggable: true,
         selectedPosIndex: _selectedPosIndex,
@@ -99,35 +124,9 @@ const LineupController = (() => {
 
   async function toggleNoSub(playerId) {
     if (!_currentMatchId) return;
-    const match = await MatchModel.toggleNoSub(_currentMatchId, playerId);
-    const players = await PlayerModel.getAll();
-    LineupView.renderNoSubPicker(match, players);
-  }
-
-  async function editSub(subIdx) {
-    const match = await MatchModel.getById(_currentMatchId);
-    const sub = match?.substitutions?.[subIdx];
-    if (!sub) return;
-    const row = document.getElementById(`sub-row-${subIdx}`);
-    if (!row) return;
-    row.querySelector('.sub-display').style.display = 'none';
-    row.querySelector('.sub-edit-form').style.display = '';
-    const outSel = document.getElementById(`sub-out-${subIdx}`);
-    const inSel  = document.getElementById(`sub-in-${subIdx}`);
-    if (outSel) outSel.value = sub.playerOut;
-    if (inSel)  inSel.value  = sub.playerIn;
-  }
-
-  async function saveSub(subIdx) {
-    const playerOut = document.getElementById(`sub-out-${subIdx}`)?.value;
-    const playerIn  = document.getElementById(`sub-in-${subIdx}`)?.value;
-    if (!playerOut || !playerIn) return;
-    if (playerOut === playerIn) return alert('Kies twee verschillende spelers.');
-    await MatchModel.overrideSubstitution(_currentMatchId, subIdx, playerOut, playerIn);
+    await MatchModel.toggleNoSub(_currentMatchId, playerId);
     await _renderAll();
   }
-
-  function cancelSub() { _renderAll(); }
 
   async function _generateLineup() {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
@@ -151,5 +150,5 @@ const LineupController = (() => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  return { init, refresh, showMinute, toggleNoSub, editSub, saveSub, cancelSub, shareViaWhatsapp };
+  return { init, refresh, showMinute, toggleNoSub, toggleMatrixCell, applyMatrix, shareViaWhatsapp };
 })();
