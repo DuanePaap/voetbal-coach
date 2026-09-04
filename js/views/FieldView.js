@@ -120,10 +120,10 @@ const FieldView = (() => {
     const R   = 20;
     const col = _posColor(pos.positionCode);
 
-    const parts      = (pos.playerName || '').trim().split(' ');
-    const lastName   = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').toUpperCase();
-    const firstName  = parts.length > 1 ? parts[0][0].toUpperCase() + '.' : '';
-    const displayName = (firstName + ' ' + lastName).trim().slice(0, 12);
+    const parts       = (pos.playerName || '').trim().split(/\s+/).filter(Boolean);
+    const firstName   = parts[0] || '';
+    const lastInitial = parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() + '.' : '';
+    const displayName = (lastInitial ? `${firstName} ${lastInitial}` : firstName).slice(0, 16);
 
     const g = _el('g', {
       class: 'player-pin-marker',
