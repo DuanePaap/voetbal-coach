@@ -162,6 +162,10 @@ const LineupController = (() => {
   async function _generateLineup() {
     if (!_currentMatchId) return alert('Selecteer eerst een wedstrijd.');
     const [match, players] = await Promise.all([MatchModel.getById(_currentMatchId), PlayerModel.getAll()]);
+    if (match?.lineup?.length) {
+      const ok = confirm('Weet je zeker dat je een nieuwe opstelling wilt genereren? De huidige indeling en handmatige positie-wissels worden overschreven (vergrendelde vakjes in de matrix blijven staan).');
+      if (!ok) return;
+    }
     const result = MatchModel.generateLineup(match, players);
     if (!result) return alert('Niet genoeg spelers voor de opstelling — voeg meer aanwezige spelers toe of pas de vergrendelingen in de matrix aan.');
     await MatchModel.saveLineup(_currentMatchId, result.lineup, result.substitutions);

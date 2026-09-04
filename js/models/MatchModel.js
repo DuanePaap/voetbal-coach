@@ -34,15 +34,58 @@ const MatchModel = (() => {
     return save({ ...m, positionOverrides: {} });
   }
 
+  // Swap which player occupies two positions — scoped to just the wisselmoment-segment
+  // containing `minute`, so repositioning players on the field never changes anyone's
+  // on/off timing elsewhere (that's what the switch matrix is for). A lineup slot that
+  // spans multiple segments (e.g. a player nobody ever subs) gets split at the segment
+  // boundary first, so only that one block's position assignment is touched.
   async function swapLineupPlayers(matchId, posIndexA, posIndexB, minute) {
     const m = await getById(matchId);
     if (!m?.lineup) return null;
-    const lineup = m.lineup.map(l => ({ ...l }));
-    const slotA = lineup.find(l => l.positionIndex === posIndexA && l.startMinute <= minute && l.endMinute > minute);
-    const slotB = lineup.find(l => l.positionIndex === posIndexB && l.startMinute <= minute && l.endMinute > minute);
+
+    const bounds = _segmentBounds(m);
+    let segStart = bounds[0], segEnd = bounds[bounds.length - 1];
+    for (let i = 0; i < bounds.length - 1; i++) {
+      if (minute >= bounds[i] && minute < bounds[i + 1]) { segStart = bounds[i]; segEnd = bounds[i + 1]; break; }
+    }
+
+    let lineup = m.lineup.map(l => ({ ...l }));
+    const splitAt = (boundary) => {
+      lineup = lineup.flatMap(l => (l.startMinute < boundary && l.endMinute > boundary)
+        ? [{ ...l, endMinute: boundary }, { ...l, startMinute: boundary }]
+        : [l]);
+    };
+    splitAt(segStart);
+    splitAt(segEnd);
+
+    const slotA = lineup.find(l => l.positionIndex === posIndexA && l.startMinute === segStart && l.endMinute === segEnd);
+    const slotB = lineup.find(l => l.positionIndex === posIndexB && l.startMinute === segStart && l.endMinute === segEnd);
     if (!slotA || !slotB) return null;
     [slotA.playerId, slotB.playerId] = [slotB.playerId, slotA.playerId];
-    return save({ ...m, lineup });
+
+    return save({ ...m, lineup: _mergeAdjacentSlots(lineup) });
+  }
+
+  // Re-join slots that ended up back-to-back with the same player + position after a
+  // swap, so the lineup array doesn't fragment into ever-smaller pieces over time.
+  function _mergeAdjacentSlots(lineup) {
+    const byPlayer = {};
+    lineup.forEach(l => { (byPlayer[l.playerId] = byPlayer[l.playerId] || []).push(l); });
+    const merged = [];
+    Object.values(byPlayer).forEach(slots => {
+      const sorted = [...slots].sort((a, b) => a.startMinute - b.startMinute);
+      let current = null;
+      sorted.forEach(slot => {
+        if (current && current.positionIndex === slot.positionIndex && current.endMinute === slot.startMinute) {
+          current.endMinute = slot.endMinute;
+        } else {
+          if (current) merged.push(current);
+          current = { ...slot };
+        }
+      });
+      if (current) merged.push(current);
+    });
+    return merged;
   }
 
   // Score player fit for a position — uses mainPosition + preferredPositions combined
@@ -60,6 +103,19 @@ const MatchModel = (() => {
     }
     if (all.size > 0) return -5;
     return 0; // No preferences at all → last-resort flexible fill
+  }
+
+  // Segment boundaries in minutes, e.g. [0, 20, 40, 60] for a 60-min match with 3
+  // wisselmomenten — shared by generation, the switch matrix and position swaps so
+  // they all agree on where one block ends and the next begins.
+  function _segmentBounds(match) {
+    const matchMinutes = match.duration || 60;
+    const numSegments = match.subMoments || 2;
+    const segLen = matchMinutes / numSegments;
+    const bounds = [0];
+    for (let i = 1; i < numSegments; i++) bounds.push(Math.round(i * segLen));
+    bounds.push(matchMinutes);
+    return bounds;
   }
 
   // Greedy assignment: most-restricted positions first (fewest qualified players), GK always first
@@ -160,15 +216,11 @@ const MatchModel = (() => {
     const positions = formation.positions;
     const numOnField = positions.length;
     const present = players.filter(p => match.presentPlayers.includes(p.id));
-    const matchMinutes = match.duration || 60;
     const numSegments = match.subMoments || 2;
 
     if (present.length < numOnField) return null;
 
-    const segLen = matchMinutes / numSegments;
-    const segmentBounds = [0];
-    for (let i = 1; i < numSegments; i++) segmentBounds.push(Math.round(i * segLen));
-    segmentBounds.push(matchMinutes);
+    const segmentBounds = _segmentBounds(match);
 
     const noSub = new Set(match.noSubPlayers || []);
     const noSubPresent = present.filter(p => noSub.has(p.id));
@@ -189,7 +241,7 @@ const MatchModel = (() => {
       const assignment = assignPlayers(present, positions);
       const lineup = assignment.map(({ player, pos }) => ({
         playerId: player.id, positionCode: pos.code, positionIndex: positions.indexOf(pos),
-        startMinute: 0, endMinute: matchMinutes,
+        startMinute: 0, endMinute: segmentBounds[segmentBounds.length - 1],
       }));
       return { lineup, substitutions: [] };
     }
@@ -238,13 +290,8 @@ const MatchModel = (() => {
   function getSegmentInfo(match, players) {
     const formation = FormationModel.getFormation(match.fieldType, match.formation);
     const numOnField = formation?.positions?.length || 0;
-    const matchMinutes = match.duration || 60;
     const numSegments = match.subMoments || 2;
-
-    const segLen = matchMinutes / numSegments;
-    const bounds = [0];
-    for (let i = 1; i < numSegments; i++) bounds.push(Math.round(i * segLen));
-    bounds.push(matchMinutes);
+    const bounds = _segmentBounds(match);
 
     const noSub = new Set(match.noSubPlayers || []);
     const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
