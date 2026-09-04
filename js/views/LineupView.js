@@ -49,13 +49,14 @@ const LineupView = (() => {
     el.innerHTML = rows;
   }
 
-  function renderPeriodNav(match) {
+  function renderPeriodNav(match, currentMinute = 0) {
     const el = document.getElementById('period-nav');
     if (!match?.lineup?.length) { el.innerHTML = ''; return; }
     const minutes = [0, ...(match.substitutions || []).map(s => s.minute)];
     const unique = [...new Set(minutes)].sort((a, b) => a - b);
-    const buttons = unique.map((min, i) =>
-      `<button class="period-btn${i === 0 ? ' active' : ''}" data-minute="${min}" onclick="LineupController.showMinute(${min}, this)">
+    const activeMin = unique.includes(currentMinute) ? currentMinute : unique[0];
+    const buttons = unique.map(min =>
+      `<button class="period-btn${min === activeMin ? ' active' : ''}" data-minute="${min}" onclick="LineupController.showMinute(${min}, this)">
         ${min === 0 ? 'Start' : min + "'"}
       </button>`).join('');
     el.innerHTML = buttons;

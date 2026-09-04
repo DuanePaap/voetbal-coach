@@ -56,7 +56,7 @@ const LineupController = (() => {
 
     LineupView.renderInfo(match, players);
     LineupView.renderNoSubPicker(match, players);
-    LineupView.renderPeriodNav(match);
+    LineupView.renderPeriodNav(match, _currentMinute);
     _renderMatrix();
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
