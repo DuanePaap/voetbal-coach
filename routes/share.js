@@ -30,6 +30,7 @@ router.get('/:token', async (req, res) => {
       substitutions: JSON.parse(row.substitutions || '[]'),
       positionOverrides: JSON.parse(row.position_overrides || '{}'),
       gatherTime: row.gather_time,
+      matchTime: row.match_time,
       fruitPlayerId: row.fruit_player_id,
       refereePlayerId: row.referee_player_id,
       linesmanPlayerId: row.linesman_player_id,

@@ -2,11 +2,15 @@ const MatchView = (() => {
   function _cardHtml(m) {
     const dateStr = new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
     const numPresent = (m.presentPlayers || []).length;
+    const times = [];
+    if (m.gatherTime) times.push(`🕐 ${m.gatherTime} verzamelen`);
+    if (m.matchTime) times.push(`⚽ ${m.matchTime} aftrap`);
+    const timesStr = times.length ? ` &bull; ${times.join(' · ')}` : '';
     return `
       <div class="match-card">
         <div class="match-card-info">
           <div class="match-title">vs ${m.opponent}</div>
-          <div class="match-meta">${dateStr} &bull; ${numPresent} spelers aanwezig</div>
+          <div class="match-meta">${dateStr}${timesStr} &bull; ${numPresent} spelers aanwezig</div>
           <div style="display:flex;gap:6px;margin-top:4px">
             <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
             <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
@@ -74,6 +78,7 @@ const MatchView = (() => {
     document.getElementById('match-duration').value = match?.duration || 60;
     document.getElementById('match-sub-moments').value = match?.subMoments || 2;
     document.getElementById('match-gather-time').value = match?.gatherTime || '';
+    document.getElementById('match-time').value = match?.matchTime || '';
 
     _renderFormationOptions(match?.fieldType || 'half', match?.formation);
     _renderPlayerChecklist(players, match?.presentPlayers || []);
@@ -136,6 +141,7 @@ const MatchView = (() => {
       duration: parseInt(document.getElementById('match-duration').value) || 60,
       subMoments: parseInt(document.getElementById('match-sub-moments').value) || 2,
       gatherTime: document.getElementById('match-gather-time').value || null,
+      matchTime: document.getElementById('match-time').value || null,
       captainPlayerId: document.getElementById('match-captain').value || null,
       fruitPlayerId: document.getElementById('match-fruit').value || null,
       refereePlayerId: document.getElementById('match-referee').value || null,

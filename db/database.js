@@ -55,6 +55,7 @@ async function migrate() {
       share_token TEXT,
       segment_pins TEXT NOT NULL DEFAULT '[]',
       gather_time TEXT,
+      match_time TEXT,
       fruit_player_id TEXT,
       referee_player_id TEXT,
       linesman_player_id TEXT,
@@ -74,6 +75,7 @@ async function migrate() {
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS matches_share_token_idx ON matches (share_token) WHERE share_token IS NOT NULL`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS segment_pins TEXT NOT NULL DEFAULT '[]'`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS gather_time TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_time TEXT`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS fruit_player_id TEXT`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS referee_player_id TEXT`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS linesman_player_id TEXT`;

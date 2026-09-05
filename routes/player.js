@@ -11,6 +11,7 @@ function parseMatch(row) {
     formation: row.formation, periods: row.periods,
     duration: row.duration_minutes, subMoments: row.sub_moments,
     gatherTime:       row.gather_time,
+    matchTime:        row.match_time,
     fruitPlayerId:    row.fruit_player_id,
     refereePlayerId:  row.referee_player_id,
     linesmanPlayerId: row.linesman_player_id,

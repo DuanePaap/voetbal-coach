@@ -258,6 +258,9 @@ const LineupView = (() => {
     if (match?.gatherTime) {
       rows.push(`<div class="match-extra-row">🕐 <span>Verzamelen om <strong>${_esc(match.gatherTime)}</strong></span></div>`);
     }
+    if (match?.matchTime) {
+      rows.push(`<div class="match-extra-row">⚽ <span>Aftrap om <strong>${_esc(match.matchTime)}</strong></span></div>`);
+    }
     if (match?.fruitPlayerId && byId[match.fruitPlayerId]) {
       rows.push(`<div class="match-extra-row">🍊 <span>Fruit: <strong>${_esc(byId[match.fruitPlayerId].name)}</strong></span></div>`);
     }

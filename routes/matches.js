@@ -43,6 +43,7 @@ function parse(row) {
     subMoments: row.sub_moments,
     segmentPins:      JSON.parse(row.segment_pins       || '[]'),
     gatherTime:       row.gather_time,
+    matchTime:        row.match_time,
     fruitPlayerId:    row.fruit_player_id,
     refereePlayerId:  row.referee_player_id,
     linesmanPlayerId: row.linesman_player_id,
@@ -79,7 +80,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments, presentPlayers,
-            gatherTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
+            gatherTime, matchTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
     if (!opponent?.trim() || !date) return res.status(400).json({ error: 'Tegenstander en datum zijn verplicht' });
     const id = randomUUID();
     const durationVal = clampInt(duration, 60, 10, 150);
@@ -87,12 +88,12 @@ router.post('/', async (req, res) => {
     const { rows: [row] } = await sql`
       INSERT INTO matches (id, coach_id, opponent, date, location, field_type, formation, periods,
         duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, segment_pins,
-        gather_time, fruit_player_id, referee_player_id, linesman_player_id, captain_player_id, created_at)
+        gather_time, match_time, fruit_player_id, referee_player_id, linesman_player_id, captain_player_id, created_at)
       VALUES (${id}, ${req.coach.id}, ${opponent.trim()}, ${date},
               ${location || 'thuis'}, ${fieldType || 'half'}, ${formation || '1-2-3-1'}, ${periods || 2},
               ${durationVal}, ${subMomentsVal},
               ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'}, ${'[]'},
-              ${sanitizeTime(gatherTime)}, ${sanitizePlayerId(fruitPlayerId)}, ${sanitizePlayerId(refereePlayerId)},
+              ${sanitizeTime(gatherTime)}, ${sanitizeTime(matchTime)}, ${sanitizePlayerId(fruitPlayerId)}, ${sanitizePlayerId(refereePlayerId)},
               ${sanitizePlayerId(linesmanPlayerId)}, ${sanitizePlayerId(captainPlayerId)},
               ${Date.now()})
       RETURNING *
@@ -111,7 +112,7 @@ router.put('/:id', async (req, res) => {
 
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
             presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides, segmentPins,
-            gatherTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
+            gatherTime, matchTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
 
@@ -132,6 +133,7 @@ router.put('/:id', async (req, res) => {
           position_overrides= ${JSON.stringify(positionOverrides|| {})},
           segment_pins      = ${JSON.stringify(sanitizePins(segmentPins))},
           gather_time       = ${sanitizeTime(gatherTime)},
+          match_time        = ${sanitizeTime(matchTime)},
           fruit_player_id   = ${sanitizePlayerId(fruitPlayerId)},
           referee_player_id = ${sanitizePlayerId(refereePlayerId)},
           linesman_player_id= ${sanitizePlayerId(linesmanPlayerId)},
