@@ -31,7 +31,8 @@ const MatchView = (() => {
   // dan (indien ingevuld) scheids/grensrechter/fruit, dan de aanwezige spelers.
   // Gebruikt dezelfde iconen als het Wedstrijdinfo-paneel elders in de app.
   function buildShareText(match, players) {
-    const dateStr = new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const rawDateStr = new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const dateStr = rawDateStr.replace(/\b\p{L}/gu, ch => ch.toUpperCase());
     const locationLabel = match.location === 'thuis' ? 'Thuis' : 'Uit';
 
     const lines = [`*${dateStr}*`, `${locationLabel} tegen ${match.opponent}`];
@@ -51,7 +52,7 @@ const MatchView = (() => {
       .map(id => byId[id]).filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name));
     if (present.length) {
-      lines.push('', `*Aanwezige spelers (${present.length}):*`, ...present.map(p => p.name));
+      lines.push('', `*Aanwezige spelers (${present.length}):*`, ...present.map(p => `✅ ${p.name}`));
     }
 
     return lines.join('\n');
