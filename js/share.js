@@ -30,6 +30,7 @@
     _match = data;
     _renderInfo();
     _renderShell(content);
+    _renderExtras();
     _renderPeriodNav();
     _renderField();
     _renderSubs();
@@ -47,11 +48,16 @@
 
   function _renderShell(content) {
     content.innerHTML = `
+      <div id="share-extras"></div>
       <div id="share-period-nav" class="period-nav"></div>
       <div class="lineup-field-wrapper">
         <svg id="share-lineup-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
       <div id="share-subs" class="share-subs-panel"></div>`;
+  }
+
+  function _renderExtras() {
+    LineupView.renderMatchExtras('share-extras', _match, _match.players);
   }
 
   function _renderSubs() {

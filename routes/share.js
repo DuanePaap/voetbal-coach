@@ -16,8 +16,10 @@ router.get('/:token', async (req, res) => {
     if (Date.now() >= expiresAt) return res.status(410).json({ error: 'Deze opstelling is niet meer beschikbaar' });
 
     const presentPlayers = JSON.parse(row.present_players || '[]');
+    const dutyIds = [row.fruit_player_id, row.referee_player_id, row.linesman_player_id, row.captain_player_id].filter(Boolean);
+    const visibleIds = new Set([...presentPlayers, ...dutyIds]);
     const { rows: allPlayers } = await sql`SELECT id, name, photo FROM players WHERE coach_id = ${row.coach_id}`;
-    const players = allPlayers.filter(p => presentPlayers.includes(p.id));
+    const players = allPlayers.filter(p => visibleIds.has(p.id));
 
     res.json({
       opponent: row.opponent,
@@ -27,6 +29,11 @@ router.get('/:token', async (req, res) => {
       lineup: JSON.parse(row.lineup || '[]'),
       substitutions: JSON.parse(row.substitutions || '[]'),
       positionOverrides: JSON.parse(row.position_overrides || '{}'),
+      gatherTime: row.gather_time,
+      fruitPlayerId: row.fruit_player_id,
+      refereePlayerId: row.referee_player_id,
+      linesmanPlayerId: row.linesman_player_id,
+      captainPlayerId: row.captain_player_id,
       players,
     });
   } catch (err) {

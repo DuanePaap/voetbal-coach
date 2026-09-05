@@ -55,6 +55,7 @@ const LineupController = (() => {
     _pins = _segmentInfo ? _segmentInfo.pins.map(m => new Map(m)) : null;
 
     LineupView.renderInfo(match, players);
+    LineupView.renderMatchExtras('lineup-extras', match, players);
     LineupView.renderNoSubPicker(match, players);
     LineupView.renderPeriodNav(match, _currentMinute);
     _renderMatrix();

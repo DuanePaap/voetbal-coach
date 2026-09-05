@@ -205,10 +205,19 @@ const FieldView = (() => {
     // no name to identify an empty slot by. ──
     if (pos.playerName) {
       const nameY = R + 10;
-      const nw = Math.max(40, displayName.length * 5.6 + 10);
+      const fullText = pos.isCaptain ? `C ${displayName}` : displayName;
+      const nw = Math.max(40, fullText.length * 5.6 + 10);
       g.appendChild(_el('rect', { x: -nw/2, y: nameY - 11, width: nw, height: 14, rx: 3, fill: 'rgba(0,0,0,.85)', style: 'pointer-events:none' }));
       const nameEl = _el('text', { x: 0, y: nameY, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': '800', fill: '#fff', 'font-family': "'Segoe UI',sans-serif", style: 'pointer-events:none' });
-      nameEl.textContent = displayName;
+      if (pos.isCaptain) {
+        const capSpan = document.createElementNS(NS, 'tspan');
+        capSpan.setAttribute('fill', '#FFD400');
+        capSpan.textContent = 'C ';
+        nameEl.appendChild(capSpan);
+      }
+      const nameSpan = document.createElementNS(NS, 'tspan');
+      nameSpan.textContent = displayName;
+      nameEl.appendChild(nameSpan);
       g.appendChild(nameEl);
     } else {
       const badgeY = R + 10;
@@ -256,10 +265,19 @@ const FieldView = (() => {
 
     if (pos.playerName) {
       const nm = pos.playerName.split(' ').pop().toUpperCase().slice(0, 8);
-      const nw = nm.length * 5 + 8;
+      const fullText = pos.isCaptain ? `C ${nm}` : nm;
+      const nw = fullText.length * 5 + 8;
       g.appendChild(_el('rect', { x: -nw/2, y: R+3, width: nw, height: 11, rx: 2, fill: 'rgba(0,0,0,.8)' }));
       const nt = _el('text', { x: 0, y: R+11, 'text-anchor': 'middle', fill: '#fff', 'font-size': 7.5, 'font-weight': '700', 'font-family': 'sans-serif' });
-      nt.textContent = nm;
+      if (pos.isCaptain) {
+        const capSpan = document.createElementNS(NS, 'tspan');
+        capSpan.setAttribute('fill', '#FFD400');
+        capSpan.textContent = 'C ';
+        nt.appendChild(capSpan);
+      }
+      const nmSpan = document.createElementNS(NS, 'tspan');
+      nmSpan.textContent = nm;
+      nt.appendChild(nmSpan);
       g.appendChild(nt);
     }
     return g;

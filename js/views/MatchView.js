@@ -73,9 +73,11 @@ const MatchView = (() => {
     document.getElementById('match-periods').value = String(match?.periods || 2);
     document.getElementById('match-duration').value = match?.duration || 60;
     document.getElementById('match-sub-moments').value = match?.subMoments || 2;
+    document.getElementById('match-gather-time').value = match?.gatherTime || '';
 
     _renderFormationOptions(match?.fieldType || 'half', match?.formation);
     _renderPlayerChecklist(players, match?.presentPlayers || []);
+    _renderDutySelects(players, match);
 
     // Update formations when fieldtype changes
     fieldTypeEl.onchange = () => _renderFormationOptions(fieldTypeEl.value, null);
@@ -87,6 +89,20 @@ const MatchView = (() => {
     const select = document.getElementById('match-formation');
     const options = FormationModel.getOptions(fieldType);
     select.innerHTML = options.map(o => `<option value="${o.key}" ${o.key === selected ? 'selected' : ''}>${o.label}</option>`).join('');
+  }
+
+  function _renderDutySelects(players, match) {
+    const opts = players.map(p => `<option value="${p.id}">#${p.number || '?'} ${p.name}</option>`).join('');
+    [
+      ['match-captain', match?.captainPlayerId],
+      ['match-fruit', match?.fruitPlayerId],
+      ['match-referee', match?.refereePlayerId],
+      ['match-linesman', match?.linesmanPlayerId],
+    ].forEach(([id, selected]) => {
+      const el = document.getElementById(id);
+      el.innerHTML = `<option value="">Geen</option>${opts}`;
+      el.value = selected || '';
+    });
   }
 
   function _renderPlayerChecklist(players, selected) {
@@ -119,6 +135,11 @@ const MatchView = (() => {
       periods: parseInt(document.getElementById('match-periods').value) || 2,
       duration: parseInt(document.getElementById('match-duration').value) || 60,
       subMoments: parseInt(document.getElementById('match-sub-moments').value) || 2,
+      gatherTime: document.getElementById('match-gather-time').value || null,
+      captainPlayerId: document.getElementById('match-captain').value || null,
+      fruitPlayerId: document.getElementById('match-fruit').value || null,
+      refereePlayerId: document.getElementById('match-referee').value || null,
+      linesmanPlayerId: document.getElementById('match-linesman').value || null,
     };
   }
 

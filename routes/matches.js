@@ -10,6 +10,15 @@ function clampInt(value, fallback, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
+// Optional per-match logistics: gather time (HH:MM) and player-duty assignments.
+// All nullable — a coach doesn't have to fill any of these in.
+function sanitizeTime(t) {
+  return typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.trim()) ? t.trim() : null;
+}
+function sanitizePlayerId(id) {
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
+}
+
 // Coach-authored pins on the switch matrix: { segment, playerId, on } — force a
 // player on/off the field for one segment, surviving future "Genereer opstelling".
 function sanitizePins(pins) {
@@ -33,6 +42,11 @@ function parse(row) {
     duration: row.duration_minutes,
     subMoments: row.sub_moments,
     segmentPins:      JSON.parse(row.segment_pins       || '[]'),
+    gatherTime:       row.gather_time,
+    fruitPlayerId:    row.fruit_player_id,
+    refereePlayerId:  row.referee_player_id,
+    linesmanPlayerId: row.linesman_player_id,
+    captainPlayerId:  row.captain_player_id,
     presentPlayers:   JSON.parse(row.present_players   || '[]'),
     noSubPlayers:     JSON.parse(row.no_sub_players     || '[]'),
     lineup:           JSON.parse(row.lineup             || '[]'),
@@ -64,18 +78,22 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { opponent, date, location, fieldType, formation, periods, duration, subMoments, presentPlayers } = req.body;
+    const { opponent, date, location, fieldType, formation, periods, duration, subMoments, presentPlayers,
+            gatherTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
     if (!opponent?.trim() || !date) return res.status(400).json({ error: 'Tegenstander en datum zijn verplicht' });
     const id = randomUUID();
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
     const { rows: [row] } = await sql`
       INSERT INTO matches (id, coach_id, opponent, date, location, field_type, formation, periods,
-        duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, segment_pins, created_at)
+        duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, segment_pins,
+        gather_time, fruit_player_id, referee_player_id, linesman_player_id, captain_player_id, created_at)
       VALUES (${id}, ${req.coach.id}, ${opponent.trim()}, ${date},
               ${location || 'thuis'}, ${fieldType || 'half'}, ${formation || '1-2-3-1'}, ${periods || 2},
               ${durationVal}, ${subMomentsVal},
               ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'}, ${'[]'},
+              ${sanitizeTime(gatherTime)}, ${sanitizePlayerId(fruitPlayerId)}, ${sanitizePlayerId(refereePlayerId)},
+              ${sanitizePlayerId(linesmanPlayerId)}, ${sanitizePlayerId(captainPlayerId)},
               ${Date.now()})
       RETURNING *
     `;
@@ -92,7 +110,8 @@ router.put('/:id', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
-            presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides, segmentPins } = req.body;
+            presentPlayers, noSubPlayers, lineup, substitutions, positionOverrides, segmentPins,
+            gatherTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
 
@@ -111,7 +130,12 @@ router.put('/:id', async (req, res) => {
           lineup            = ${JSON.stringify(lineup           || [])},
           substitutions     = ${JSON.stringify(substitutions    || [])},
           position_overrides= ${JSON.stringify(positionOverrides|| {})},
-          segment_pins      = ${JSON.stringify(sanitizePins(segmentPins))}
+          segment_pins      = ${JSON.stringify(sanitizePins(segmentPins))},
+          gather_time       = ${sanitizeTime(gatherTime)},
+          fruit_player_id   = ${sanitizePlayerId(fruitPlayerId)},
+          referee_player_id = ${sanitizePlayerId(refereePlayerId)},
+          linesman_player_id= ${sanitizePlayerId(linesmanPlayerId)},
+          captain_player_id = ${sanitizePlayerId(captainPlayerId)}
       WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}
       RETURNING *
     `;

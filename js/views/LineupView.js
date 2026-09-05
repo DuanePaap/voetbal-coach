@@ -27,6 +27,11 @@ const LineupView = (() => {
     `;
   }
 
+  // Small yellow "C" prefix for the match captain, wherever a player's name appears.
+  function _captainBadge(playerId, match) {
+    return playerId && match?.captainPlayerId === playerId ? '<span class="captain-badge">C</span> ' : '';
+  }
+
   function renderNoSubPicker(match, players) {
     const el = document.getElementById('no-sub-section');
     if (!match?.presentPlayers?.length) { el.innerHTML = ''; return; }
@@ -37,7 +42,7 @@ const LineupView = (() => {
       const mainPos = (p.preferredPositions || [])[0] || '–';
       return `
         <div class="no-sub-row">
-          <span class="no-sub-name">${p.name.split(' ')[0]}</span>
+          <span class="no-sub-name">${_captainBadge(p.id, match)}${p.name.split(' ')[0]}</span>
           <span class="no-sub-pos">${mainPos}</span>
           <button class="lock-btn${isLocked ? ' locked' : ''}"
             onclick="LineupController.toggleNoSub('${p.id}')"
@@ -71,8 +76,8 @@ const LineupView = (() => {
     const present = (match.presentPlayers || []).map(id => players.find(p => p.id === id)).filter(Boolean);
     const rows = match.substitutions.map(sub => `
       <div class="sub-row">
-        <span class="sub-arrow">↓</span> ${present.find(p=>p.id===sub.playerOut)?.name?.split(' ')[0]||'?'}
-        <span class="sub-arrow">↑</span> ${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
+        <span class="sub-arrow">↓</span> ${_captainBadge(sub.playerOut, match)}${present.find(p=>p.id===sub.playerOut)?.name?.split(' ')[0]||'?'}
+        <span class="sub-arrow">↑</span> ${_captainBadge(sub.playerIn, match)}${present.find(p=>p.id===sub.playerIn)?.name?.split(' ')[0]||'?'}
         <small style="margin-left:auto;color:#888">${sub.minute}'</small>
       </div>`).join('');
     container.innerHTML = rows;
@@ -100,7 +105,7 @@ const LineupView = (() => {
         const cls = ['matrix-cell', on ? 'on' : '', isPinned ? 'pinned' : ''].filter(Boolean).join(' ');
         return `<button type="button" class="${cls}" onclick="LineupController.toggleMatrixCell(${i}, '${p.id}')" title="${isPinned ? 'Vergrendeld — tik om te ontgrendelen' : 'Tik om te wisselen, nogmaals tikken = vergrendelen'}"></button>`;
       }).join('');
-      return `<div class="matrix-row"><span class="matrix-name">${p.name.split(' ')[0]}</span>${cells}</div>`;
+      return `<div class="matrix-row"><span class="matrix-name">${_captainBadge(p.id, match)}${p.name.split(' ')[0]}</span>${cells}</div>`;
     }).join('');
 
     const badCols = grid.reduce((n, s) => n + (s.size !== required ? 1 : 0), 0);
@@ -141,7 +146,7 @@ const LineupView = (() => {
       const isStarter = starters.has(p.id);
       return `
         <div class="bench-row">
-          <span>${p.name.split(' ')[0]}</span>
+          <span>${_captainBadge(p.id, match)}${p.name.split(' ')[0]}</span>
           <span class="bench-minutes">${mins}'${isStarter ? ' 🟢' : ' 🔄'}</span>
         </div>`;
     }).join('');
@@ -166,6 +171,7 @@ const LineupView = (() => {
         playerName:    player?.name,
         playerNumber:  player?.number,
         playerPhoto:   player?.photo || null,
+        isCaptain:     !!player && player.id === match.captainPlayerId,
         tier: n >= 3 ? 'gold' : n >= 1 ? 'silver' : 'bronze',
         ovr:  player?.number || null,
       };
@@ -224,12 +230,12 @@ const LineupView = (() => {
           <span class="share-sub-minute">${sub.minute}'</span>
           <span class="share-sub-player">
             ${_miniAvatar(pOut, outPos)}
-            <span class="share-sub-name">${_esc(pOut?.name?.split(' ')[0] || '?')}</span>
+            <span class="share-sub-name">${_captainBadge(sub.playerOut, match)}${_esc(pOut?.name?.split(' ')[0] || '?')}</span>
             <span class="share-sub-arrow share-sub-out">↓</span>
           </span>
           <span class="share-sub-player">
             ${_miniAvatar(pIn, inPos)}
-            <span class="share-sub-name">${_esc(pIn?.name?.split(' ')[0] || '?')}</span>
+            <span class="share-sub-name">${_captainBadge(sub.playerIn, match)}${_esc(pIn?.name?.split(' ')[0] || '?')}</span>
             <span class="share-sub-arrow share-sub-in">↑</span>
           </span>
         </div>`;
@@ -238,5 +244,30 @@ const LineupView = (() => {
     el.innerHTML = `<h4>Wissels</h4>${rows}`;
   }
 
-  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, renderSubsPanel, getPositionsAtMinute };
+  // Optional per-match logistics (verzameltijd, fruit/scheidsrechter/grensrechter) —
+  // only rows for fields the coach actually filled in are shown. Shared by the coach
+  // sidebar, the public share page and the player app.
+  function renderMatchExtras(containerId, match, players) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const byId = {};
+    (players || []).forEach(p => { byId[p.id] = p; });
+
+    const rows = [];
+    if (match?.gatherTime) {
+      rows.push(`<div class="match-extra-row">🕐 <span>Verzamelen om <strong>${_esc(match.gatherTime)}</strong></span></div>`);
+    }
+    if (match?.fruitPlayerId && byId[match.fruitPlayerId]) {
+      rows.push(`<div class="match-extra-row">🍊 <span>Fruit: <strong>${_esc(byId[match.fruitPlayerId].name)}</strong></span></div>`);
+    }
+    if (match?.refereePlayerId && byId[match.refereePlayerId]) {
+      rows.push(`<div class="match-extra-row">🟨 <span>Scheidsrechter: <strong>${_esc(byId[match.refereePlayerId].name)}</strong></span></div>`);
+    }
+    if (match?.linesmanPlayerId && byId[match.linesmanPlayerId]) {
+      rows.push(`<div class="match-extra-row">🚩 <span>Grensrechter: <strong>${_esc(byId[match.linesmanPlayerId].name)}</strong></span></div>`);
+    }
+    el.innerHTML = rows.join('');
+  }
+
+  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, renderSubsPanel, renderMatchExtras, getPositionsAtMinute };
 })();

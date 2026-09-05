@@ -72,6 +72,7 @@ const PlayerAppController = (() => {
     _currentMatch = match;
     _currentGameplan = gameplan;
 
+    LineupView.renderMatchExtras('player-extras', match, _playersCache);
     _renderPeriodNav(match);
     _renderOpstellingField();
     LineupView.renderSubsPanel('player-subs', match, _playersCache);

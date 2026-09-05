@@ -54,6 +54,11 @@ async function migrate() {
       sub_moments INTEGER NOT NULL DEFAULT 2,
       share_token TEXT,
       segment_pins TEXT NOT NULL DEFAULT '[]',
+      gather_time TEXT,
+      fruit_player_id TEXT,
+      referee_player_id TEXT,
+      linesman_player_id TEXT,
+      captain_player_id TEXT,
       present_players TEXT NOT NULL DEFAULT '[]',
       no_sub_players TEXT NOT NULL DEFAULT '[]',
       lineup TEXT NOT NULL DEFAULT '[]',
@@ -68,6 +73,11 @@ async function migrate() {
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS share_token TEXT`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS matches_share_token_idx ON matches (share_token) WHERE share_token IS NOT NULL`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS segment_pins TEXT NOT NULL DEFAULT '[]'`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS gather_time TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS fruit_player_id TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS referee_player_id TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS linesman_player_id TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS captain_player_id TEXT`;
   await sql`
     CREATE TABLE IF NOT EXISTS gameplans (
       match_id TEXT PRIMARY KEY,
