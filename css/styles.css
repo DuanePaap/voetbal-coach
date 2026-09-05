@@ -791,6 +791,33 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
 
 #share-content .lineup-field-wrapper { margin-top: 4px; }
 
+.share-subs-panel {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; margin-top: 16px; box-shadow: var(--shadow);
+}
+.share-subs-panel h4 {
+  font-size: .7rem; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px;
+}
+.share-sub-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.share-sub-row:last-child { border-bottom: none; }
+.share-sub-minute { font-size: .78rem; font-weight: 800; color: var(--accent); min-width: 28px; flex-shrink: 0; }
+.share-sub-player { display: flex; align-items: center; gap: 6px; }
+.share-mini-avatar {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: #16222e; flex-shrink: 0;
+}
+.share-mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.share-mini-initials { font-size: .55rem; font-weight: 800; color: rgba(160,200,240,.9); }
+.share-sub-name { font-size: .82rem; color: var(--text); }
+.share-sub-arrow { font-size: .85rem; }
+.share-sub-out { color: var(--red); }
+.share-sub-in { color: var(--accent); }
+
 /* ===== GAMEPLAN ===== */
 .gameplan-wrapper { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
 .gameplan-sidebar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
