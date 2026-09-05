@@ -783,11 +783,14 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
   padding: 1px 4px; border-radius: 3px; margin-right: 3px;
 }
 
-/* ── Optionele wedstrijdlogistiek: verzameltijd, fruit, scheids/grensrechter ── */
+/* ── Optionele wedstrijdlogistiek: verzameltijd, fruit, scheids/grensrechter ──
+   Deelt de .share-subs-panel-vormgeving met het Wissels-paneel. ── */
 .match-extra-row {
   display: flex; align-items: center; gap: 6px;
-  font-size: .8rem; color: var(--text-muted); padding: 3px 0;
+  font-size: .8rem; color: var(--text-muted); padding: 8px 0;
+  border-bottom: 1px solid var(--border);
 }
+.match-extra-row:last-child { border-bottom: none; }
 .match-extra-row strong { color: var(--text); font-weight: 700; }
 
 /* ===== SHARE PAGE (public, no login) ===== */

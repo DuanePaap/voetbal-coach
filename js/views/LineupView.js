@@ -214,7 +214,8 @@ const LineupView = (() => {
     const el = document.getElementById(containerId);
     if (!el) return;
     const subs = match?.substitutions || [];
-    if (!subs.length) { el.innerHTML = ''; return; }
+    if (!subs.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+    el.style.display = '';
 
     const playerById = {};
     (players || []).forEach(p => { playerById[p.id] = p; });
@@ -266,7 +267,9 @@ const LineupView = (() => {
     if (match?.linesmanPlayerId && byId[match.linesmanPlayerId]) {
       rows.push(`<div class="match-extra-row">🚩 <span>Grensrechter: <strong>${_esc(byId[match.linesmanPlayerId].name)}</strong></span></div>`);
     }
-    el.innerHTML = rows.join('');
+    if (!rows.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = `<h4>Wedstrijdinfo</h4>${rows.join('')}`;
   }
 
   return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, renderSubsPanel, renderMatchExtras, getPositionsAtMinute };
