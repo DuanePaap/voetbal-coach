@@ -20,10 +20,41 @@ const MatchView = (() => {
           </div>
         </div>
         <div class="match-card-actions">
+          <button class="btn btn-secondary btn-icon" onclick="MatchController.shareViaWhatsapp('${m.id}')" title="Deel via WhatsApp">📤</button>
           <button class="btn btn-secondary btn-icon" onclick="MatchController.edit('${m.id}')" title="Bewerken">✏️</button>
           <button class="btn btn-danger btn-icon" onclick="MatchController.remove('${m.id}')" title="Verwijderen">🗑</button>
         </div>
       </div>`;
+  }
+
+  // WhatsApp-tekst voor de oudergroep: datum, thuis/uit + tegenstander, tijden,
+  // dan (indien ingevuld) scheids/grensrechter/fruit, dan de aanwezige spelers.
+  // Gebruikt dezelfde iconen als het Wedstrijdinfo-paneel elders in de app.
+  function buildShareText(match, players) {
+    const dateStr = new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const locationLabel = match.location === 'thuis' ? 'Thuis' : 'Uit';
+
+    const lines = [`*${dateStr}*`, `${locationLabel} tegen ${match.opponent}`];
+    if (match.gatherTime) lines.push(`🕐 Verzamelen: ${match.gatherTime}`);
+    if (match.matchTime) lines.push(`⚽ Aftrap: ${match.matchTime}`);
+
+    const byId = {};
+    (players || []).forEach(p => { byId[p.id] = p; });
+
+    const duties = [];
+    if (match.refereePlayerId && byId[match.refereePlayerId]) duties.push(`🟨 Scheidsrechter: ${byId[match.refereePlayerId].name}`);
+    if (match.linesmanPlayerId && byId[match.linesmanPlayerId]) duties.push(`🚩 Grensrechter: ${byId[match.linesmanPlayerId].name}`);
+    if (match.fruitPlayerId && byId[match.fruitPlayerId]) duties.push(`🍊 Teamfruit: ${byId[match.fruitPlayerId].name}`);
+    if (duties.length) lines.push('', ...duties);
+
+    const present = (match.presentPlayers || [])
+      .map(id => byId[id]).filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (present.length) {
+      lines.push('', `*Aanwezige spelers (${present.length}):*`, ...present.map(p => p.name));
+    }
+
+    return lines.join('\n');
   }
 
   function renderList(matches, players) {
@@ -149,5 +180,5 @@ const MatchView = (() => {
     };
   }
 
-  return { renderList, openModal, closeModal, getFormData };
+  return { renderList, openModal, closeModal, getFormData, buildShareText };
 })();

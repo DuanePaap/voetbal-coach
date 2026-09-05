@@ -26,6 +26,12 @@ const MatchController = (() => {
     await refresh();
   }
 
+  async function shareViaWhatsapp(id) {
+    const [match, players] = await Promise.all([MatchModel.getById(id), PlayerModel.getAll()]);
+    const text = MatchView.buildShareText(match, players);
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  }
+
   async function _onSave(e) {
     e.preventDefault();
     const data = MatchView.getFormData();
@@ -39,5 +45,5 @@ const MatchController = (() => {
     await refresh();
   }
 
-  return { init, refresh, edit, remove };
+  return { init, refresh, edit, remove, shareViaWhatsapp };
 })();
