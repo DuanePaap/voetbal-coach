@@ -54,62 +54,8 @@
       <div id="share-subs" class="share-subs-panel"></div>`;
   }
 
-  // Same FC26 position colors as FieldView's on-field markers, so the mini avatars
-  // in the substitution list match the field exactly.
-  function _posColor(code) {
-    if (code === 'GK')                     return '#f59e0b';
-    if (['CB','LB','RB'].includes(code))   return '#3b82f6';
-    if (['CDM'].includes(code))            return '#06b6d4';
-    if (['CM','LM','RM'].includes(code))   return '#10b981';
-    if (['CAM'].includes(code))            return '#a855f7';
-    if (['LW','RW','ST'].includes(code))   return '#ef4444';
-    return '#64748b';
-  }
-
-  function _initials(name) {
-    return (name || '').trim().split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  }
-
-  function _miniAvatar(player, positionCode) {
-    const col = _posColor(positionCode);
-    const inner = player?.photo
-      ? `<img src="${_esc(player.photo)}" alt="">`
-      : `<span class="share-mini-initials">${_esc(_initials(player?.name))}</span>`;
-    return `<span class="share-mini-avatar" style="border-color:${col}">${inner}</span>`;
-  }
-
   function _renderSubs() {
-    const el = document.getElementById('share-subs');
-    if (!el) return;
-    const subs = _match.substitutions || [];
-    if (!subs.length) { el.innerHTML = ''; return; }
-
-    const playerById = {};
-    (_match.players || []).forEach(p => { playerById[p.id] = p; });
-
-    const lineup = _match.lineup || [];
-    const rows = [...subs].sort((a, b) => a.minute - b.minute).map(sub => {
-      const outPos = lineup.find(l => l.playerId === sub.playerOut && l.endMinute === sub.minute)?.positionCode;
-      const inPos  = lineup.find(l => l.playerId === sub.playerIn  && l.startMinute === sub.minute)?.positionCode;
-      const pOut = playerById[sub.playerOut];
-      const pIn  = playerById[sub.playerIn];
-      return `
-        <div class="share-sub-row">
-          <span class="share-sub-minute">${sub.minute}'</span>
-          <span class="share-sub-player">
-            ${_miniAvatar(pOut, outPos)}
-            <span class="share-sub-name">${_esc(pOut?.name?.split(' ')[0] || '?')}</span>
-            <span class="share-sub-arrow share-sub-out">↓</span>
-          </span>
-          <span class="share-sub-player">
-            ${_miniAvatar(pIn, inPos)}
-            <span class="share-sub-name">${_esc(pIn?.name?.split(' ')[0] || '?')}</span>
-            <span class="share-sub-arrow share-sub-in">↑</span>
-          </span>
-        </div>`;
-    }).join('');
-
-    el.innerHTML = `<h4>Wissels</h4>${rows}`;
+    LineupView.renderSubsPanel('share-subs', _match, _match.players);
   }
 
   function _renderPeriodNav() {

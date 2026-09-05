@@ -74,7 +74,7 @@ const PlayerAppController = (() => {
 
     _renderPeriodNav(match);
     _renderOpstellingField();
-    _renderBench(match);
+    LineupView.renderSubsPanel('player-subs', match, _playersCache);
     _renderScenarioList(gameplan.scenarios || []);
     _renderGameplanField(null);
   }
@@ -100,18 +100,6 @@ const PlayerAppController = (() => {
     if (!formation) { FieldView.render(svgEl, [], match.fieldType || 'half', null, { cardMode: true }); return; }
     const positions = LineupView.getPositionsAtMinute(match, _playersCache, formation, _currentMinute);
     FieldView.render(svgEl, positions, match.fieldType, null, { cardMode: true, draggable: false });
-  }
-
-  function _renderBench(match) {
-    const el = document.getElementById('player-bench');
-    if (!el) return;
-    if (!match?.substitutions?.length) { el.innerHTML = ''; return; }
-    const rows = match.substitutions.map(s => {
-      const out = _playersCache.find(p => p.id === s.playerOut);
-      const inn = _playersCache.find(p => p.id === s.playerIn);
-      return `<div class="bench-sub-row"><span class="sub-min">${s.minute}'</span> &#x2193; ${out?.name || '?'} &nbsp; &#x2191; ${inn?.name || '?'}</div>`;
-    });
-    el.innerHTML = `<div class="bench-subs-header">Wissels</div>${rows.join('')}`;
   }
 
   function _renderScenarioList(scenarios) {

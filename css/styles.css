@@ -896,19 +896,7 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
 .player-page { display: none; }
 .player-page.active { display: block; }
 .player-match-bar { padding: 12px 20px 0; max-width: 360px; }
-.bench-subs-header {
-  font-size: .75rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--text-muted); margin: 12px 0 6px;
-}
-.bench-sub-row {
-  font-size: .85rem; color: var(--text); padding: 4px 0;
-  border-bottom: 1px solid var(--border);
-}
-.bench-sub-row:last-child { border-bottom: none; }
-.sub-min {
-  display: inline-block; min-width: 28px;
-  color: var(--accent); font-weight: 700; font-size: .8rem;
-}
+.player-opstelling-view { max-width: 560px; margin: 0 auto; }
 
 /* ===== NAV SWITCH ===== */
 .nav-divider {
