@@ -14,9 +14,9 @@ const MatchView = (() => {
           <div style="display:flex;gap:6px;margin-top:4px">
             <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
             <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
-            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
-            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
-            <span class="match-badge" style="background:#e8ecf0;color:#445566">${m.duration || 60}′ &bull; ${m.subMoments || 2}× wisselen</span>
+            <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
+            <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
+            <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.duration || 60}′ &bull; ${m.subMoments || 2}× wisselen</span>
           </div>
         </div>
         <div class="match-card-actions">

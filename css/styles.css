@@ -995,8 +995,9 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
   .player-table th:nth-child(4), .player-table td:nth-child(4) { display: none; }
   .player-table-wrapper { overflow-x: auto; }
 
-  /* Matches */
+  /* Matches: hou de kaart compact — opstelling/perioden/wisselmomenten weg */
   .match-card { flex-wrap: wrap; gap: 10px; }
+  .match-badge-extra { display: none; }
 
   /* Player app */
   .player-match-bar { max-width: 100%; padding: 12px 16px 0; }
