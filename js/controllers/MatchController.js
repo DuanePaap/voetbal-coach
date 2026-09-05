@@ -30,7 +30,11 @@ const MatchController = (() => {
     e.preventDefault();
     const data = MatchView.getFormData();
     if (!data.opponent || !data.date) return;
-    await MatchModel.save(data);
+    // The modal only edits a subset of fields (settings, not the lineup itself) — merge
+    // into the existing record so untouched fields like lineup/substitutions/segmentPins
+    // survive a settings-only edit instead of being wiped to empty.
+    const existing = data.id ? await MatchModel.getById(data.id) : null;
+    await MatchModel.save(existing ? { ...existing, ...data } : data);
     MatchView.closeModal();
     await refresh();
   }
