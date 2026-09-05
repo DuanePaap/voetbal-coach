@@ -812,7 +812,7 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
 
 .share-subs-panel {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 14px 16px; margin-top: 16px; box-shadow: var(--shadow);
+  padding: 14px 16px; margin: 16px 0; box-shadow: var(--shadow);
 }
 .share-subs-panel h4 {
   font-size: .7rem; font-weight: 800; color: var(--text-muted);
