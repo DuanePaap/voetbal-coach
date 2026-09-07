@@ -23,6 +23,12 @@ router.post('/register', async (req, res) => {
     const nameTrimmed = name.trim();
     await sql`INSERT INTO coaches (id, email, password_hash, name, created_at)
               VALUES (${id}, ${emailLower}, ${hash}, ${nameTrimmed}, ${Date.now()})`;
+    // Elke coach heeft altijd minstens één team — de migrate()-backfill dekt
+    // alleen bestaande coaches op het moment van een cold start, dus een
+    // nieuw geregistreerde coach krijgt hier direct zijn eigen standaardteam.
+    await sql`INSERT INTO teams (id, coach_id, name, created_at, is_default)
+              VALUES (${id + '-default'}, ${id}, 'Team 1', ${Date.now()}, true)
+              ON CONFLICT (coach_id) WHERE is_default DO NOTHING`;
 
     const token = jwt.sign({ id, email: emailLower, name: nameTrimmed }, getJwtSecret(), { expiresIn: '30d' });
     res.json({ token, coach: { id, email: emailLower, name: nameTrimmed } });
