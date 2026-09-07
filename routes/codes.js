@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       SELECT plc.code, plc.player_id, plc.created_at, p.name AS player_name
       FROM player_login_codes plc
       JOIN players p ON p.id = plc.player_id
-      WHERE plc.coach_id = ${req.coach.id} AND p.team_id = ${req.teamId}
+      WHERE p.team_id = ${req.teamId}
       ORDER BY p.name
     `;
     res.json(rows.map(r => ({ code: r.code, playerId: r.player_id, playerName: r.player_name, createdAt: r.created_at })));
@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
     const { playerId } = req.body;
     if (!playerId) return res.status(400).json({ error: 'Player ID verplicht' });
 
-    const { rows: [player] } = await sql`SELECT id, name FROM players WHERE id = ${playerId} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    const { rows: [player] } = await sql`SELECT id, name FROM players WHERE id = ${playerId} AND team_id = ${req.teamId}`;
     if (!player) return res.status(404).json({ error: 'Speler niet gevonden' });
 
     // Generate a unique code
@@ -45,7 +45,7 @@ router.post('/', async (req, res) => {
       attempts++;
     } while (attempts < 20);
 
-    await sql`DELETE FROM player_login_codes WHERE player_id = ${playerId} AND coach_id = ${req.coach.id}`;
+    await sql`DELETE FROM player_login_codes WHERE player_id = ${playerId}`;
     await sql`INSERT INTO player_login_codes (code, player_id, coach_id, created_at) VALUES (${code}, ${playerId}, ${req.coach.id}, ${Date.now()})`;
 
     res.json({ code, playerId, playerName: player.name });
@@ -58,7 +58,10 @@ router.post('/', async (req, res) => {
 router.delete('/:code', async (req, res) => {
   try {
     const codeUpper = req.params.code.toUpperCase();
-    const result = await sql`DELETE FROM player_login_codes WHERE code = ${codeUpper} AND coach_id = ${req.coach.id}`;
+    const result = await sql`
+      DELETE FROM player_login_codes
+      WHERE code = ${codeUpper} AND player_id IN (SELECT id FROM players WHERE team_id = ${req.teamId})
+    `;
     if (result.rowCount === 0) return res.status(404).json({ error: 'Code niet gevonden' });
     res.json({ ok: true });
   } catch (err) {

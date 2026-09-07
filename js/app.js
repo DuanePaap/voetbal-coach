@@ -21,6 +21,7 @@
         MatchController.init(),
         LineupController.init(),
         GamePlanController.init(),
+        TeamCoachesController.init(),
       ];
       if (_isAdmin()) {
         document.getElementById('nav-btn-admin').style.display = '';

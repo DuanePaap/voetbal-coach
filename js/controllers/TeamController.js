@@ -33,6 +33,10 @@ const TeamController = (() => {
     if (titleEl && activeTeam) titleEl.textContent = activeTeam.name;
   }
 
+  function getActiveTeam() {
+    return _teams.find(t => t.id === _activeId) || null;
+  }
+
   async function _renameActiveTeam() {
     const activeTeam = _teams.find(t => t.id === _activeId);
     if (!activeTeam) return;
@@ -78,5 +82,5 @@ const TeamController = (() => {
     return d.innerHTML;
   }
 
-  return { init };
+  return { init, getActiveTeam };
 })();

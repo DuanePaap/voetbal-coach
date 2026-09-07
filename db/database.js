@@ -135,6 +135,19 @@ async function migrate() {
     )
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS team_coaches (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      coach_id TEXT,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      added_at BIGINT NOT NULL,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
+    )
+  `;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS team_coaches_team_email_idx ON team_coaches (team_id, email)`;
+  await sql`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT,

@@ -58,7 +58,7 @@ function parse(row) {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM matches WHERE coach_id = ${req.coach.id} AND team_id = ${req.teamId} ORDER BY date DESC`;
+    const { rows } = await sql`SELECT * FROM matches WHERE team_id = ${req.teamId} ORDER BY date DESC`;
     res.json(rows.map(parse));
   } catch (err) {
     console.error(err);
@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND team_id = ${req.teamId}`;
     if (!row) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     res.json(parse(row));
   } catch (err) {
@@ -123,7 +123,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { rows: [existing] } = await sql`SELECT id FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    const { rows: [existing] } = await sql`SELECT id FROM matches WHERE id = ${req.params.id} AND team_id = ${req.teamId}`;
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
@@ -160,7 +160,7 @@ router.put('/:id', async (req, res) => {
           referee_player_id = ${refereeVal},
           linesman_player_id= ${linesmanVal},
           captain_player_id = ${captainVal}
-      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}
+      WHERE id = ${req.params.id} AND team_id = ${req.teamId}
       RETURNING *
     `;
     res.json(parse(row));
@@ -174,12 +174,12 @@ router.put('/:id', async (req, res) => {
 // no-login WhatsApp-shareable link. Idempotent — repeated calls return the same token.
 router.post('/:id/share', async (req, res) => {
   try {
-    const { rows: [existing] } = await sql`SELECT share_token FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    const { rows: [existing] } = await sql`SELECT share_token FROM matches WHERE id = ${req.params.id} AND team_id = ${req.teamId}`;
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     if (existing.share_token) return res.json({ token: existing.share_token });
 
     const token = randomBytes(16).toString('hex');
-    await sql`UPDATE matches SET share_token = ${token} WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    await sql`UPDATE matches SET share_token = ${token} WHERE id = ${req.params.id} AND team_id = ${req.teamId}`;
     res.json({ token });
   } catch (err) {
     console.error(err);
@@ -189,7 +189,7 @@ router.post('/:id/share', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await sql`DELETE FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
+    const result = await sql`DELETE FROM matches WHERE id = ${req.params.id} AND team_id = ${req.teamId}`;
     if (result.rowCount === 0) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     res.json({ ok: true });
   } catch (err) {

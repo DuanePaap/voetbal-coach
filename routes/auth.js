@@ -29,6 +29,10 @@ router.post('/register', async (req, res) => {
     await sql`INSERT INTO teams (id, coach_id, name, created_at, is_default)
               VALUES (${id + '-default'}, ${id}, 'Team 1', ${Date.now()}, true)
               ON CONFLICT (coach_id) WHERE is_default DO NOTHING`;
+    // Activeer eventuele openstaande team-uitnodigingen voor dit e-mailadres
+    // (een andere coach had dit account al als co-coach toegevoegd vóórdat
+    // het bestond) — set-based en idempotent.
+    await sql`UPDATE team_coaches SET coach_id = ${id} WHERE email = ${emailLower} AND coach_id IS NULL`;
 
     const token = jwt.sign({ id, email: emailLower, name: nameTrimmed }, getJwtSecret(), { expiresIn: '30d' });
     res.json({ token, coach: { id, email: emailLower, name: nameTrimmed } });
