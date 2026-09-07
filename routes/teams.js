@@ -35,4 +35,21 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Naam is verplicht' });
+    const { rows: [row] } = await sql`
+      UPDATE teams SET name = ${name}
+      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}
+      RETURNING *
+    `;
+    if (!row) return res.status(404).json({ error: 'Team niet gevonden' });
+    res.json(parse(row));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
 module.exports = router;

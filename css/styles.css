@@ -99,6 +99,12 @@ html, body {
   letter-spacing: 2px; color: var(--text); margin-bottom: 3px;
 }
 .page-subtitle { font-size: .8rem; color: var(--text-muted); }
+.team-name-inline { color: var(--accent); }
+.btn-edit-team-name {
+  background: none; border: none; cursor: pointer; font-size: .8rem;
+  margin-left: 6px; opacity: .6; transition: opacity .15s; vertical-align: middle;
+}
+.btn-edit-team-name:hover { opacity: 1; }
 
 /* ===== BUTTONS ===== */
 .btn {
