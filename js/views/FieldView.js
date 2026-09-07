@@ -287,7 +287,11 @@ const FieldView = (() => {
   // options: { cardMode, draggable, onPositionChange(idx,x,y), onPlayerClick(idx), onBallDrop(x,y) }
   function render(svgEl, positions, fieldType, ballPos, options = {}) {
     svgEl.innerHTML = '';
-    svgEl.style.touchAction = options.draggable ? 'none' : 'auto';
+    // Don't disable touch-action on the whole SVG — that blocks scrolling anywhere
+    // over the field, even on empty grass. Only the individual player/ball marker
+    // elements get touch-action:none (see their own inline style below), so a drag
+    // still works while the rest of the field stays scrollable.
+    svgEl.style.touchAction = 'auto';
     _buildDefs(svgEl, positions);
 
     // Grass base
