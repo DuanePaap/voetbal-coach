@@ -1,7 +1,13 @@
 'use strict';
 const express = require('express');
 const { sql } = require('../db/database');
+const { ADMIN_EMAIL } = require('../middleware/auth');
 const router = express.Router();
+
+function sanitizeEmail(email) {
+  const trimmed = (email || '').toLowerCase().trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) ? trimmed : null;
+}
 
 router.get('/login-bg', async (req, res) => {
   try {
@@ -37,6 +43,75 @@ router.delete('/login-bg', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Admin delete login-bg error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+// Coach account management — het admin-account zelf (ADMIN_EMAIL) mag hier nooit
+// via bewerkt/geblokkeerd/verwijderd worden, ook niet als iemand het id raadt.
+router.get('/coaches', async (req, res) => {
+  try {
+    const { rows } = await sql`SELECT id, email, name, blocked, created_at FROM coaches ORDER BY created_at ASC`;
+    res.json(rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      name: r.name,
+      blocked: r.blocked,
+      createdAt: r.created_at,
+      isAdmin: r.email === ADMIN_EMAIL,
+    })));
+  } catch (err) {
+    console.error('Admin list coaches error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.put('/coaches/:id/email', async (req, res) => {
+  try {
+    const { rows: [target] } = await sql`SELECT email FROM coaches WHERE id = ${req.params.id}`;
+    if (!target) return res.status(404).json({ error: 'Coach niet gevonden' });
+    if (target.email === ADMIN_EMAIL) return res.status(403).json({ error: 'Het admin-account kan niet gewijzigd worden' });
+
+    const email = sanitizeEmail(req.body.email);
+    if (!email) return res.status(400).json({ error: 'Ongeldig e-mailadres' });
+    if (email === ADMIN_EMAIL) return res.status(400).json({ error: 'Dit e-mailadres is gereserveerd' });
+
+    const { rows: [existing] } = await sql`SELECT id FROM coaches WHERE email = ${email} AND id != ${req.params.id}`;
+    if (existing) return res.status(409).json({ error: 'Dit e-mailadres is al in gebruik' });
+
+    await sql`UPDATE coaches SET email = ${email} WHERE id = ${req.params.id}`;
+    res.json({ ok: true, email });
+  } catch (err) {
+    console.error('Admin update coach email error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.put('/coaches/:id/block', async (req, res) => {
+  try {
+    const { rows: [target] } = await sql`SELECT email FROM coaches WHERE id = ${req.params.id}`;
+    if (!target) return res.status(404).json({ error: 'Coach niet gevonden' });
+    if (target.email === ADMIN_EMAIL) return res.status(403).json({ error: 'Het admin-account kan niet gewijzigd worden' });
+
+    const blocked = !!req.body.blocked;
+    await sql`UPDATE coaches SET blocked = ${blocked} WHERE id = ${req.params.id}`;
+    res.json({ ok: true, blocked });
+  } catch (err) {
+    console.error('Admin block coach error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.delete('/coaches/:id', async (req, res) => {
+  try {
+    const { rows: [target] } = await sql`SELECT email FROM coaches WHERE id = ${req.params.id}`;
+    if (!target) return res.status(404).json({ error: 'Coach niet gevonden' });
+    if (target.email === ADMIN_EMAIL) return res.status(403).json({ error: 'Het admin-account kan niet verwijderd worden' });
+
+    await sql`DELETE FROM coaches WHERE id = ${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Admin delete coach error:', err);
     res.status(500).json({ error: 'Server fout' });
   }
 });

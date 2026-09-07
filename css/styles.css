@@ -368,7 +368,7 @@ select option { background: var(--bg-card); }
 
 /* ===== ADMIN PANEL ===== */
 .admin-grid {
-  display: grid; grid-template-columns: minmax(0, 600px); gap: 20px;
+  display: grid; grid-template-columns: minmax(0, 900px); gap: 20px;
 }
 
 .admin-card {
@@ -459,7 +459,7 @@ select option { background: var(--bg-card); }
 
 .player-table-wrapper {
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  border-radius: var(--radius); overflow: hidden; overflow-x: auto; box-shadow: var(--shadow);
 }
 
 .player-table { width: 100%; border-collapse: collapse; }

@@ -46,3 +46,4 @@ function adminAuth(req, res, next) {
 module.exports = coachAuth;
 module.exports.player = playerAuth;
 module.exports.admin  = adminAuth;
+module.exports.ADMIN_EMAIL = ADMIN_EMAIL;

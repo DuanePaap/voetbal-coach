@@ -23,9 +23,11 @@ async function migrate() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
+      blocked BOOLEAN NOT NULL DEFAULT FALSE,
       created_at BIGINT NOT NULL
     )
   `;
+  await sql`ALTER TABLE coaches ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,

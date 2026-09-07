@@ -40,6 +40,7 @@ router.post('/login', async (req, res) => {
     const emailLower = email.toLowerCase().trim();
     const { rows: [coach] } = await sql`SELECT * FROM coaches WHERE email = ${emailLower}`;
     if (!coach) return res.status(401).json({ error: 'Onjuist e-mailadres of wachtwoord' });
+    if (coach.blocked) return res.status(403).json({ error: 'Dit account is geblokkeerd. Neem contact op met de beheerder.' });
 
     const ok = await bcrypt.compare(password, coach.password_hash);
     if (!ok) return res.status(401).json({ error: 'Onjuist e-mailadres of wachtwoord' });

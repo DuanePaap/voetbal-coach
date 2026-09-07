@@ -5,6 +5,7 @@ const AdminController = (() => {
   async function init() {
     await _load();
     _bindEvents();
+    await _loadCoaches();
   }
 
   async function _load() {
@@ -120,5 +121,91 @@ const AdminController = (() => {
     }
   }
 
-  return { init };
+  // ── Coach account management ──────────────────────────────────────────
+  function _esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  async function _loadCoaches() {
+    const el = document.getElementById('admin-coaches-error');
+    if (el) el.textContent = '';
+    try {
+      const coaches = await API.get('/api/admin/coaches');
+      _renderCoaches(coaches);
+    } catch (err) {
+      console.error('Admin load coaches error:', err);
+      if (el) el.textContent = err.message;
+    }
+  }
+
+  function _renderCoaches(coaches) {
+    const tbody = document.getElementById('admin-coaches-body');
+    if (!tbody) return;
+    if (!coaches.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">Geen coach-accounts gevonden.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = coaches.map(c => {
+      const created = new Date(c.createdAt).toLocaleDateString('nl-NL');
+      const statusBadge = c.blocked
+        ? '<span class="status-badge status-inactive">Geblokkeerd</span>'
+        : '<span class="status-badge status-active">Actief</span>';
+      const actions = c.isAdmin
+        ? '<span style="color:var(--text-dim);font-size:.78rem">— admin —</span>'
+        : `
+          <div class="table-actions">
+            <button class="table-action-btn" onclick="AdminController.editCoachEmail('${c.id}')" title="E-mail wijzigen">✏️</button>
+            <button class="table-action-btn" onclick="AdminController.toggleCoachBlock('${c.id}', ${c.blocked})" title="${c.blocked ? 'Deblokkeren' : 'Blokkeren'}">${c.blocked ? '🔓' : '🔒'}</button>
+            <button class="table-action-btn" onclick="AdminController.removeCoach('${c.id}')" title="Verwijderen">🗑</button>
+          </div>`;
+      return `
+        <tr>
+          <td>${_esc(c.name)}${c.isAdmin ? ' <span style="color:var(--text-dim);font-size:.72rem">(admin)</span>' : ''}</td>
+          <td>${_esc(c.email)}</td>
+          <td>${statusBadge}</td>
+          <td>${created}</td>
+          <td>${actions}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function editCoachEmail(id) {
+    const el = document.getElementById('admin-coaches-error');
+    if (el) el.textContent = '';
+    const email = prompt('Nieuw e-mailadres:');
+    if (!email) return;
+    try {
+      await API.put(`/api/admin/coaches/${id}/email`, { email });
+      await _loadCoaches();
+    } catch (err) {
+      if (el) el.textContent = err.message;
+    }
+  }
+
+  async function toggleCoachBlock(id, currentlyBlocked) {
+    const el = document.getElementById('admin-coaches-error');
+    if (el) el.textContent = '';
+    try {
+      await API.put(`/api/admin/coaches/${id}/block`, { blocked: !currentlyBlocked });
+      await _loadCoaches();
+    } catch (err) {
+      if (el) el.textContent = err.message;
+    }
+  }
+
+  async function removeCoach(id) {
+    if (!confirm('Dit coach-account en alle bijbehorende spelers/wedstrijden verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+    const el = document.getElementById('admin-coaches-error');
+    if (el) el.textContent = '';
+    try {
+      await API.delete(`/api/admin/coaches/${id}`);
+      await _loadCoaches();
+    } catch (err) {
+      if (el) el.textContent = err.message;
+    }
+  }
+
+  return { init, editCoachEmail, toggleCoachBlock, removeCoach };
 })();
