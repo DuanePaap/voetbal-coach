@@ -29,12 +29,31 @@ const LineupController = (() => {
     await _refreshMatchSelect();
   }
 
+  // Default to today's match; otherwise the soonest upcoming one; otherwise the
+  // most recently played one — so opening Opstelling always lands on what's
+  // actually relevant right now instead of whichever match sorts first.
+  function _pickDefaultMatchId(matches) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = matches.find(m => m.date === todayStr);
+    if (today) return today.id;
+
+    const upcoming = matches.filter(m => m.date > todayStr).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (upcoming.length) return upcoming[0].id;
+
+    const past = matches.filter(m => m.date < todayStr).sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (past.length) return past[0].id;
+
+    return matches[0].id;
+  }
+
   async function _refreshMatchSelect() {
     const matches = await MatchModel.getAll();
     LineupView.populateMatchSelect(matches);
+    if (!matches.length) return;
     const select = document.getElementById('lineup-match-select');
-    if (select.value) await _loadMatch(select.value);
-    else if (matches.length) { select.value = matches[0].id; await _loadMatch(matches[0].id); }
+    const defaultId = _pickDefaultMatchId(matches);
+    select.value = defaultId;
+    await _loadMatch(defaultId);
   }
 
   async function _loadMatch(matchId) {
