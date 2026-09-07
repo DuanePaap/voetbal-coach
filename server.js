@@ -66,8 +66,17 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: message });
 });
 
-// Run DB migrations (idempotent — safe to run on every cold start)
-migrate().catch(err => console.error('Migration error:', err));
+// Run DB migrations (idempotent — safe to run on every cold start). Eén retry
+// bij een mislukte poging, want een transiënte Neon-verbindingsfout op de
+// eerste statement zou anders deze warme container blijvend zonder de nieuwe
+// tabellen/kolommen laten draaien totdat hij ververst wordt.
+function runMigrations(retriesLeft = 1) {
+  migrate().catch(err => {
+    console.error('Migration error:', err);
+    if (retriesLeft > 0) setTimeout(() => runMigrations(retriesLeft - 1), 2000);
+  });
+}
+runMigrations();
 
 // Export app for Vercel; listen only when run directly
 module.exports = app;
