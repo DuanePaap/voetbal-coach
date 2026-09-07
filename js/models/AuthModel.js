@@ -42,6 +42,7 @@ const AuthModel = (() => {
   function logout() {
     localStorage.removeItem(T);
     localStorage.removeItem(C);
+    localStorage.removeItem('vc_team_id');
     location.reload();
   }
 

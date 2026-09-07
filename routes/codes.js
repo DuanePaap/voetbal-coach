@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       SELECT plc.code, plc.player_id, plc.created_at, p.name AS player_name
       FROM player_login_codes plc
       JOIN players p ON p.id = plc.player_id
-      WHERE plc.coach_id = ${req.coach.id}
+      WHERE plc.coach_id = ${req.coach.id} AND p.team_id = ${req.teamId}
       ORDER BY p.name
     `;
     res.json(rows.map(r => ({ code: r.code, playerId: r.player_id, playerName: r.player_name, createdAt: r.created_at })));
@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
     const { playerId } = req.body;
     if (!playerId) return res.status(400).json({ error: 'Player ID verplicht' });
 
-    const { rows: [player] } = await sql`SELECT id, name FROM players WHERE id = ${playerId} AND coach_id = ${req.coach.id}`;
+    const { rows: [player] } = await sql`SELECT id, name FROM players WHERE id = ${playerId} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!player) return res.status(404).json({ error: 'Speler niet gevonden' });
 
     // Generate a unique code

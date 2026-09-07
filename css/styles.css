@@ -76,6 +76,12 @@ html, body {
   cursor: pointer; font-size: 1rem; padding: 4px 8px; transition: all .15s;
 }
 .btn-logout:hover { color: var(--text); border-color: var(--border-light); }
+.team-switcher {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-muted); font-size: .78rem;
+  padding: 5px 8px; max-width: 130px; cursor: pointer;
+}
+.team-switcher:hover { color: var(--text); border-color: var(--border-light); }
 
 /* ===== MAIN ===== */
 .main-content { max-width: 1440px; margin: 0 auto; padding: 24px; }
@@ -964,6 +970,7 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
   /* Hamburger: show button, hide inline nav */
   .nav-hamburger { display: flex; }
   .coach-name { display: none; }
+  .team-switcher { max-width: 84px; }
 
   .nav-links {
     position: absolute; top: 60px; left: 0; right: 0;

@@ -19,7 +19,7 @@ function parse(row) {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM players WHERE coach_id = ${req.coach.id} ORDER BY name`;
+    const { rows } = await sql`SELECT * FROM players WHERE coach_id = ${req.coach.id} AND team_id = ${req.teamId} ORDER BY name`;
     res.json(rows.map(parse));
   } catch (err) {
     console.error(err);
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const { rows: [row] } = await sql`SELECT * FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const { rows: [row] } = await sql`SELECT * FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!row) return res.status(404).json({ error: 'Speler niet gevonden' });
     res.json(parse(row));
   } catch (err) {
@@ -46,8 +46,8 @@ router.post('/', async (req, res) => {
     const prefJson = JSON.stringify(preferredPositions || []);
     const isPresent = present !== false ? 1 : 0;
     const { rows: [row] } = await sql`
-      INSERT INTO players (id, coach_id, name, photo, number, main_position, preferred_positions, present, created_at)
-      VALUES (${id}, ${req.coach.id}, ${name.trim()}, ${photo || null}, ${number || null},
+      INSERT INTO players (id, coach_id, team_id, name, photo, number, main_position, preferred_positions, present, created_at)
+      VALUES (${id}, ${req.coach.id}, ${req.teamId}, ${name.trim()}, ${photo || null}, ${number || null},
               ${mainPosition || null}, ${prefJson}, ${isPresent}, ${Date.now()})
       RETURNING *
     `;
@@ -60,7 +60,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { rows: [existing] } = await sql`SELECT id FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const { rows: [existing] } = await sql`SELECT id FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!existing) return res.status(404).json({ error: 'Speler niet gevonden' });
 
     const { name, photo, number, mainPosition, preferredPositions, present } = req.body;
@@ -70,7 +70,7 @@ router.put('/:id', async (req, res) => {
       UPDATE players
       SET name = ${name?.trim() || ''}, photo = ${photo || null}, number = ${number || null},
           main_position = ${mainPosition || null}, preferred_positions = ${prefJson}, present = ${isPresent}
-      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}
+      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}
       RETURNING *
     `;
     res.json(parse(row));
@@ -82,7 +82,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await sql`DELETE FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const result = await sql`DELETE FROM players WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (result.rowCount === 0) return res.status(404).json({ error: 'Speler niet gevonden' });
     res.json({ ok: true });
   } catch (err) {

@@ -18,7 +18,7 @@ router.get('/:token', async (req, res) => {
     const presentPlayers = JSON.parse(row.present_players || '[]');
     const dutyIds = [row.fruit_player_id, row.referee_player_id, row.linesman_player_id, row.captain_player_id].filter(Boolean);
     const visibleIds = new Set([...presentPlayers, ...dutyIds]);
-    const { rows: allPlayers } = await sql`SELECT id, name, photo FROM players WHERE coach_id = ${row.coach_id}`;
+    const { rows: allPlayers } = await sql`SELECT id, name, photo FROM players WHERE team_id = ${row.team_id}`;
     const players = allPlayers.filter(p => visibleIds.has(p.id));
 
     res.json({

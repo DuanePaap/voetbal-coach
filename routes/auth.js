@@ -60,7 +60,7 @@ router.post('/player-login', async (req, res) => {
 
     const codeUpper = code.toUpperCase().trim();
     const { rows: [row] } = await sql`
-      SELECT plc.player_id, plc.coach_id, p.name AS player_name, p.photo AS player_photo
+      SELECT plc.player_id, plc.coach_id, p.name AS player_name, p.photo AS player_photo, p.team_id AS team_id
       FROM player_login_codes plc
       JOIN players p ON p.id = plc.player_id
       WHERE plc.code = ${codeUpper}
@@ -68,7 +68,7 @@ router.post('/player-login', async (req, res) => {
     if (!row) return res.status(401).json({ error: 'Ongeldige logincode' });
 
     const token = jwt.sign(
-      { type: 'player', id: row.player_id, coachId: row.coach_id, name: row.player_name },
+      { type: 'player', id: row.player_id, coachId: row.coach_id, teamId: row.team_id, name: row.player_name },
       getJwtSecret(),
       { expiresIn: '365d' }
     );

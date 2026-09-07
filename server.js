@@ -27,11 +27,13 @@ const shareLimiter = rateLimit({
 });
 
 const authMiddleware = require('./middleware/auth');
+const teamScope = require('./middleware/team');
 app.use('/api/auth',      authLimiter,                 require('./routes/auth'));
-app.use('/api/players',   authMiddleware,              require('./routes/players'));
-app.use('/api/matches',   authMiddleware,              require('./routes/matches'));
-app.use('/api/gameplans', authMiddleware,              require('./routes/gameplans'));
-app.use('/api/codes',     authMiddleware,              require('./routes/codes'));
+app.use('/api/teams',     authMiddleware,              require('./routes/teams'));
+app.use('/api/players',   authMiddleware, teamScope,   require('./routes/players'));
+app.use('/api/matches',   authMiddleware, teamScope,   require('./routes/matches'));
+app.use('/api/gameplans', authMiddleware, teamScope,   require('./routes/gameplans'));
+app.use('/api/codes',     authMiddleware, teamScope,   require('./routes/codes'));
 app.use('/api/player',                                 require('./routes/player'));
 app.use('/api/share',     shareLimiter,                require('./routes/share'));
 app.use('/api/admin',     authMiddleware.admin,        require('./routes/admin'));

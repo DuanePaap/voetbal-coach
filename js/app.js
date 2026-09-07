@@ -15,6 +15,7 @@
       await PlayerAppController.init();
     } else {
       _showCoachApp();
+      await TeamController.init();
       const tasks = [
         PlayerController.init(),
         MatchController.init(),
@@ -192,6 +193,11 @@
     // Hamburger menus
     _initHamburger('nav-hamburger', 'nav-links');
     _initHamburger('player-nav-hamburger', 'player-nav-links');
+
+    // Als in een ander tabblad van team gewisseld wordt, dit tabblad ook verversen
+    window.addEventListener('storage', e => {
+      if (e.key === 'vc_team_id' && e.newValue !== e.oldValue) location.reload();
+    });
 
     // Close menus when clicking outside navbar
     document.addEventListener('click', e => {

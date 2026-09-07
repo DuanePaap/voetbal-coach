@@ -58,7 +58,7 @@ function parse(row) {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM matches WHERE coach_id = ${req.coach.id} ORDER BY date DESC`;
+    const { rows } = await sql`SELECT * FROM matches WHERE coach_id = ${req.coach.id} AND team_id = ${req.teamId} ORDER BY date DESC`;
     res.json(rows.map(parse));
   } catch (err) {
     console.error(err);
@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!row) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     res.json(parse(row));
   } catch (err) {
@@ -76,6 +76,16 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Server fout' });
   }
 });
+
+// Spelers die als fruitdienst/scheidsrechter/grensrechter/aanvoerder zijn opgegeven
+// moeten wel echt bij dit team horen — voorkomt dat een verouderde front-end picker
+// een speler van het verkeerde team koppelt.
+async function _sanitizeDutyId(id, teamId) {
+  const playerId = sanitizePlayerId(id);
+  if (!playerId) return null;
+  const { rows: [player] } = await sql`SELECT id FROM players WHERE id = ${playerId} AND team_id = ${teamId}`;
+  return player ? playerId : null;
+}
 
 router.post('/', async (req, res) => {
   try {
@@ -85,16 +95,22 @@ router.post('/', async (req, res) => {
     const id = randomUUID();
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
+    const [fruitVal, refereeVal, linesmanVal, captainVal] = await Promise.all([
+      _sanitizeDutyId(fruitPlayerId, req.teamId),
+      _sanitizeDutyId(refereePlayerId, req.teamId),
+      _sanitizeDutyId(linesmanPlayerId, req.teamId),
+      _sanitizeDutyId(captainPlayerId, req.teamId),
+    ]);
     const { rows: [row] } = await sql`
-      INSERT INTO matches (id, coach_id, opponent, date, location, field_type, formation, periods,
+      INSERT INTO matches (id, coach_id, team_id, opponent, date, location, field_type, formation, periods,
         duration_minutes, sub_moments, present_players, no_sub_players, lineup, substitutions, position_overrides, segment_pins,
         gather_time, match_time, fruit_player_id, referee_player_id, linesman_player_id, captain_player_id, created_at)
-      VALUES (${id}, ${req.coach.id}, ${opponent.trim()}, ${date},
+      VALUES (${id}, ${req.coach.id}, ${req.teamId}, ${opponent.trim()}, ${date},
               ${location || 'thuis'}, ${fieldType || 'half'}, ${formation || '1-2-3-1'}, ${periods || 2},
               ${durationVal}, ${subMomentsVal},
               ${JSON.stringify(presentPlayers || [])}, ${'[]'}, ${'[]'}, ${'[]'}, ${'{}'}, ${'[]'},
-              ${sanitizeTime(gatherTime)}, ${sanitizeTime(matchTime)}, ${sanitizePlayerId(fruitPlayerId)}, ${sanitizePlayerId(refereePlayerId)},
-              ${sanitizePlayerId(linesmanPlayerId)}, ${sanitizePlayerId(captainPlayerId)},
+              ${sanitizeTime(gatherTime)}, ${sanitizeTime(matchTime)}, ${fruitVal}, ${refereeVal},
+              ${linesmanVal}, ${captainVal},
               ${Date.now()})
       RETURNING *
     `;
@@ -107,7 +123,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { rows: [existing] } = await sql`SELECT id FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const { rows: [existing] } = await sql`SELECT id FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { opponent, date, location, fieldType, formation, periods, duration, subMoments,
@@ -115,6 +131,12 @@ router.put('/:id', async (req, res) => {
             gatherTime, matchTime, fruitPlayerId, refereePlayerId, linesmanPlayerId, captainPlayerId } = req.body;
     const durationVal = clampInt(duration, 60, 10, 150);
     const subMomentsVal = clampInt(subMoments, 2, 1, 10);
+    const [fruitVal, refereeVal, linesmanVal, captainVal] = await Promise.all([
+      _sanitizeDutyId(fruitPlayerId, req.teamId),
+      _sanitizeDutyId(refereePlayerId, req.teamId),
+      _sanitizeDutyId(linesmanPlayerId, req.teamId),
+      _sanitizeDutyId(captainPlayerId, req.teamId),
+    ]);
 
     const { rows: [row] } = await sql`
       UPDATE matches
@@ -134,11 +156,11 @@ router.put('/:id', async (req, res) => {
           segment_pins      = ${JSON.stringify(sanitizePins(segmentPins))},
           gather_time       = ${sanitizeTime(gatherTime)},
           match_time        = ${sanitizeTime(matchTime)},
-          fruit_player_id   = ${sanitizePlayerId(fruitPlayerId)},
-          referee_player_id = ${sanitizePlayerId(refereePlayerId)},
-          linesman_player_id= ${sanitizePlayerId(linesmanPlayerId)},
-          captain_player_id = ${sanitizePlayerId(captainPlayerId)}
-      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}
+          fruit_player_id   = ${fruitVal},
+          referee_player_id = ${refereeVal},
+          linesman_player_id= ${linesmanVal},
+          captain_player_id = ${captainVal}
+      WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}
       RETURNING *
     `;
     res.json(parse(row));
@@ -152,12 +174,12 @@ router.put('/:id', async (req, res) => {
 // no-login WhatsApp-shareable link. Idempotent — repeated calls return the same token.
 router.post('/:id/share', async (req, res) => {
   try {
-    const { rows: [existing] } = await sql`SELECT share_token FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const { rows: [existing] } = await sql`SELECT share_token FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!existing) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     if (existing.share_token) return res.json({ token: existing.share_token });
 
     const token = randomBytes(16).toString('hex');
-    await sql`UPDATE matches SET share_token = ${token} WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    await sql`UPDATE matches SET share_token = ${token} WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     res.json({ token });
   } catch (err) {
     console.error(err);
@@ -167,7 +189,7 @@ router.post('/:id/share', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await sql`DELETE FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    const result = await sql`DELETE FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (result.rowCount === 0) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     res.json({ ok: true });
   } catch (err) {

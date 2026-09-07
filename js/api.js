@@ -3,6 +3,8 @@ const API = (() => {
     const h = { 'Content-Type': 'application/json' };
     const t = localStorage.getItem('vc_token');
     if (t) h['Authorization'] = `Bearer ${t}`;
+    const team = localStorage.getItem('vc_team_id');
+    if (team) h['X-Team-Id'] = team;
     return h;
   }
 

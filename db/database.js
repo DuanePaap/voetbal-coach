@@ -29,6 +29,17 @@ async function migrate() {
   `;
   await sql`ALTER TABLE coaches ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`
+    CREATE TABLE IF NOT EXISTS teams (
+      id TEXT PRIMARY KEY,
+      coach_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at BIGINT NOT NULL,
+      FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
+    )
+  `;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS teams_one_default_per_coach ON teams (coach_id) WHERE is_default`;
+  await sql`
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
       coach_id TEXT NOT NULL,
@@ -41,6 +52,13 @@ async function migrate() {
       created_at BIGINT NOT NULL,
       FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
     )
+  `;
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS team_id TEXT`;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE players ADD CONSTRAINT players_team_id_fkey
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS matches (
@@ -82,6 +100,13 @@ async function migrate() {
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS referee_player_id TEXT`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS linesman_player_id TEXT`;
   await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS captain_player_id TEXT`;
+  await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS team_id TEXT`;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE matches ADD CONSTRAINT matches_team_id_fkey
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$
+  `;
   await sql`
     CREATE TABLE IF NOT EXISTS gameplans (
       match_id TEXT PRIMARY KEY,
@@ -91,6 +116,13 @@ async function migrate() {
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
     )
+  `;
+  await sql`ALTER TABLE gameplans ADD COLUMN IF NOT EXISTS team_id TEXT`;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE gameplans ADD CONSTRAINT gameplans_team_id_fkey
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS player_login_codes (
@@ -108,6 +140,31 @@ async function migrate() {
       value TEXT,
       updated_at BIGINT NOT NULL DEFAULT 0
     )
+  `;
+
+  // Backfill: elke coach zonder team krijgt een standaardteam, en bestaande
+  // spelers/wedstrijden/gameplans zonder team_id worden daaraan gekoppeld.
+  // Set-based (geen JS-lus) en race-veilig bij gelijktijdige cold starts:
+  // de partial unique index laat een verliezende gelijktijdige INSERT stil
+  // mislukken, en de UPDATEs raken alleen nog-NULL rijen.
+  await sql`
+    INSERT INTO teams (id, coach_id, name, created_at, is_default)
+    SELECT c.id || '-default', c.id, 'Team 1', ${Date.now()}, true
+    FROM coaches c
+    WHERE NOT EXISTS (SELECT 1 FROM teams t WHERE t.coach_id = c.id)
+    ON CONFLICT (coach_id) WHERE is_default DO NOTHING
+  `;
+  await sql`
+    UPDATE players p SET team_id = t.id FROM teams t
+    WHERE t.coach_id = p.coach_id AND t.is_default AND p.team_id IS NULL
+  `;
+  await sql`
+    UPDATE matches m SET team_id = t.id FROM teams t
+    WHERE t.coach_id = m.coach_id AND t.is_default AND m.team_id IS NULL
+  `;
+  await sql`
+    UPDATE gameplans g SET team_id = t.id FROM teams t
+    WHERE t.coach_id = g.coach_id AND t.is_default AND g.team_id IS NULL
   `;
 }
 

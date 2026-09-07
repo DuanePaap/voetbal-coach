@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/:matchId', async (req, res) => {
   try {
-    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.coach.id}`;
+    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!match) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { rows: [gp] } = await sql`SELECT * FROM gameplans WHERE match_id = ${req.params.matchId}`;
@@ -19,15 +19,15 @@ router.get('/:matchId', async (req, res) => {
 
 router.put('/:matchId', async (req, res) => {
   try {
-    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.coach.id}`;
+    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.coach.id} AND team_id = ${req.teamId}`;
     if (!match) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { scenarios } = req.body;
     const scenariosJson = JSON.stringify(scenarios || []);
     const now = Date.now();
     await sql`
-      INSERT INTO gameplans (match_id, coach_id, scenarios, updated_at)
-      VALUES (${req.params.matchId}, ${req.coach.id}, ${scenariosJson}, ${now})
+      INSERT INTO gameplans (match_id, coach_id, team_id, scenarios, updated_at)
+      VALUES (${req.params.matchId}, ${req.coach.id}, ${req.teamId}, ${scenariosJson}, ${now})
       ON CONFLICT (match_id) DO UPDATE SET
         scenarios  = EXCLUDED.scenarios,
         updated_at = EXCLUDED.updated_at

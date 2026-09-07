@@ -1,0 +1,61 @@
+const TeamController = (() => {
+  const NEW_TEAM_VALUE = '__new__';
+  let _teams = [];
+
+  async function init() {
+    _teams = await TeamModel.getAll();
+    if (!_teams.length) return;
+
+    let activeId = localStorage.getItem('vc_team_id');
+    if (!activeId || !_teams.some(t => t.id === activeId)) {
+      activeId = _teams[0].id;
+      localStorage.setItem('vc_team_id', activeId);
+    }
+
+    _render(activeId);
+    document.getElementById('team-switcher')?.addEventListener('change', _onChange);
+  }
+
+  function _render(activeId) {
+    const select = document.getElementById('team-switcher');
+    if (!select) return;
+    select.innerHTML = _teams.map(t =>
+      `<option value="${t.id}">${_esc(t.name)}</option>`
+    ).join('') + `<option value="${NEW_TEAM_VALUE}">+ Nieuw team</option>`;
+    select.value = activeId;
+    select.style.display = '';
+  }
+
+  async function _onChange(e) {
+    const select = e.target;
+    if (select.value === NEW_TEAM_VALUE) {
+      const name = prompt('Naam van het nieuwe team:');
+      select.value = localStorage.getItem('vc_team_id');
+      if (!name?.trim()) return;
+      try {
+        const team = await TeamModel.create(name.trim());
+        _switchTo(team.id);
+      } catch (err) {
+        alert(err.message);
+      }
+      return;
+    }
+    _switchTo(select.value);
+  }
+
+  function _switchTo(teamId) {
+    if (teamId === localStorage.getItem('vc_team_id')) return;
+    const desc = document.getElementById('gameplan-description')?.value?.trim();
+    if (desc && !confirm('Je hebt een niet-opgeslagen scenario-omschrijving. Toch wisselen van team?')) return;
+    localStorage.setItem('vc_team_id', teamId);
+    location.reload();
+  }
+
+  function _esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
+  return { init };
+})();

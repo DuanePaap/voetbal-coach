@@ -26,7 +26,7 @@ function parseMatch(row) {
 
 router.get('/players', playerAuth, async (req, res) => {
   try {
-    const { rows } = await sql`SELECT id, name, photo FROM players WHERE coach_id = ${req.player.coachId} ORDER BY name`;
+    const { rows } = await sql`SELECT id, name, photo FROM players WHERE coach_id = ${req.player.coachId} AND team_id = ${req.player.teamId} ORDER BY name`;
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -36,7 +36,7 @@ router.get('/players', playerAuth, async (req, res) => {
 
 router.get('/matches', playerAuth, async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM matches WHERE coach_id = ${req.player.coachId} ORDER BY date DESC`;
+    const { rows } = await sql`SELECT * FROM matches WHERE coach_id = ${req.player.coachId} AND team_id = ${req.player.teamId} ORDER BY date DESC`;
     res.json(rows.map(parseMatch));
   } catch (err) {
     console.error(err);
@@ -46,7 +46,7 @@ router.get('/matches', playerAuth, async (req, res) => {
 
 router.get('/matches/:id', playerAuth, async (req, res) => {
   try {
-    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.player.coachId}`;
+    const { rows: [row] } = await sql`SELECT * FROM matches WHERE id = ${req.params.id} AND coach_id = ${req.player.coachId} AND team_id = ${req.player.teamId}`;
     if (!row) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
     res.json(parseMatch(row));
   } catch (err) {
@@ -57,7 +57,7 @@ router.get('/matches/:id', playerAuth, async (req, res) => {
 
 router.get('/gameplans/:matchId', playerAuth, async (req, res) => {
   try {
-    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.player.coachId}`;
+    const { rows: [match] } = await sql`SELECT id FROM matches WHERE id = ${req.params.matchId} AND coach_id = ${req.player.coachId} AND team_id = ${req.player.teamId}`;
     if (!match) return res.status(404).json({ error: 'Wedstrijd niet gevonden' });
 
     const { rows: [gp] } = await sql`SELECT * FROM gameplans WHERE match_id = ${req.params.matchId}`;
