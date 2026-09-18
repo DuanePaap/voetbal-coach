@@ -1,12 +1,13 @@
 const LineupController = (() => {
   let _currentMatchId = null;
   let _currentMinute = 0;
-  let _selectedPosIndex = null;
+  let _selected = null; // { kind: 'field', posIndex } | { kind: 'bench', playerId } | null
   let _cachedMatch = null;
   let _cachedPlayers = null;
   let _segmentInfo = null;
   let _grid = null;
   let _pins = null; // array (per segment) of Map<playerId, boolean> — locked cells
+  let _currentPositions = null; // last positions rendered on the field, incl. playerId per posIndex
 
   async function init() {
     const select = document.getElementById('lineup-match-select');
@@ -79,8 +80,9 @@ const LineupController = (() => {
     _renderMatrix();
     LineupView.renderSubstitutionTimeline(match, players);
     LineupView.renderBench(match, players);
-    _selectedPosIndex = null;
+    _selected = null;
     _renderField();
+    _renderFieldBench();
   }
 
   function _renderMatrix() {
@@ -135,41 +137,145 @@ const LineupController = (() => {
     const formation = _cachedMatch ? FormationModel.getFormation(_cachedMatch.fieldType, _cachedMatch.formation) : null;
     const svgEl = document.getElementById('lineup-field');
     if (_cachedMatch && formation) {
-      const positions = LineupView.getPositionsAtMinute(_cachedMatch, _cachedPlayers, formation, _currentMinute);
-      FieldView.render(svgEl, positions, _cachedMatch.fieldType, null, {
+      _currentPositions = LineupView.getPositionsAtMinute(_cachedMatch, _cachedPlayers, formation, _currentMinute);
+      FieldView.render(svgEl, _currentPositions, _cachedMatch.fieldType, null, {
         cardMode: true,
         draggable: true,
-        selectedPosIndex: _selectedPosIndex,
+        selectedPosIndex: _selected?.kind === 'field' ? _selected.posIndex : null,
         onPositionChange: (posIndex, x, y) => MatchModel.savePositionOverride(_currentMatchId, posIndex, x, y),
-        onPlayerClick: _onPlayerClick,
+        onPlayerClick: _onFieldClick,
       });
     } else {
+      _currentPositions = [];
       FieldView.render(svgEl, [], 'full', null, { cardMode: true });
     }
   }
 
-  function _onPlayerClick(posIndex) {
-    if (_selectedPosIndex === null) {
-      _selectedPosIndex = posIndex;
+  // Huidig wisselmoment-blok (index in _segmentInfo.bounds) voor _currentMinute —
+  // zelfde grenzen als MatchModel.swapLineupPlayers gebruikt, zodat wissels via de
+  // wisselbank altijd binnen hetzelfde blok blijven als een positie-swap op het veld.
+  function _segmentIndexForMinute() {
+    if (!_segmentInfo) return 0;
+    const { bounds } = _segmentInfo;
+    for (let i = 0; i < bounds.length - 1; i++) {
+      if (_currentMinute >= bounds[i] && _currentMinute < bounds[i + 1]) return i;
+    }
+    return Math.max(0, bounds.length - 2);
+  }
+
+  // Een speler op het veld mag alleen weg als hij niet "Geen wissel" heeft en niet
+  // vergrendeld is voor dit blok in "Wie staat wanneer?".
+  function _canSwapField(playerId, segIdx) {
+    if (!playerId || !_segmentInfo || !_pins) return false;
+    if (_segmentInfo.noSubPresent.some(p => p.id === playerId)) return false;
+    return !_pins[segIdx].has(playerId);
+  }
+
+  // Een wisselspeler mag alleen erin als hij niet vergrendeld is voor dit blok.
+  function _canSwapBench(playerId, segIdx) {
+    if (!_pins) return false;
+    return !_pins[segIdx].has(playerId);
+  }
+
+  function _onFieldClick(posIndex) {
+    const playerId = (_currentPositions || []).find(p => p.positionIndex === posIndex)?.playerId;
+    if (!_selected) {
+      if (!playerId) return;
+      _selected = { kind: 'field', posIndex };
       _renderField();
-    } else if (_selectedPosIndex === posIndex) {
-      _selectedPosIndex = null;
+      _renderFieldBench();
+      return;
+    }
+    if (_selected.kind === 'field' && _selected.posIndex === posIndex) {
+      _selected = null;
       _renderField();
-    } else {
-      const prev = _selectedPosIndex;
-      _selectedPosIndex = null;
+      _renderFieldBench();
+      return;
+    }
+    if (_selected.kind === 'field') {
+      const prev = _selected.posIndex;
+      _selected = null;
       MatchModel.swapLineupPlayers(_currentMatchId, prev, posIndex, _currentMinute)
         .then(() => _renderAll())
         .catch(console.error);
+      return;
     }
+    // Een wisselspeler was geselecteerd — wissel hem met deze veldspeler.
+    if (!playerId) {
+      _selected = null;
+      _renderField();
+      _renderFieldBench();
+      return;
+    }
+    _swapBenchField(_selected.playerId, playerId);
+  }
+
+  function selectBench(playerId) {
+    const segIdx = _segmentIndexForMinute();
+    if (_selected?.kind === 'bench' && _selected.playerId === playerId) {
+      _selected = null;
+      _renderFieldBench();
+      return;
+    }
+    if (!_selected || _selected.kind === 'bench') {
+      if (!_canSwapBench(playerId, segIdx)) return;
+      _selected = { kind: 'bench', playerId };
+      _renderField();
+      _renderFieldBench();
+      return;
+    }
+    // Een veldspeler was geselecteerd — wissel hem met deze wisselspeler.
+    const fieldPlayerId = (_currentPositions || []).find(p => p.positionIndex === _selected.posIndex)?.playerId;
+    if (!fieldPlayerId) {
+      _selected = null;
+      _renderField();
+      _renderFieldBench();
+      return;
+    }
+    _swapBenchField(playerId, fieldPlayerId);
+  }
+
+  // Wissel een wisselspeler en een veldspeler binnen het huidige blok. Herleidt de
+  // grid bewust vers uit de opgeslagen opstelling (niet uit de mogelijk nog niet
+  // toegepaste matrix-staat _grid), zodat alleen déze ene wissel wordt doorgevoerd —
+  // en geen losstaande, nog niet op "Toepassen" bevestigde matrix-aanpassingen.
+  async function _swapBenchField(benchId, fieldId) {
+    const segIdx = _segmentIndexForMinute();
+    _selected = null;
+    if (!_canSwapBench(benchId, segIdx) || !_canSwapField(fieldId, segIdx)) {
+      _renderField();
+      _renderFieldBench();
+      return;
+    }
+    const fresh = MatchModel.getSegmentInfo(_cachedMatch, _cachedPlayers);
+    fresh.grid[segIdx].delete(fieldId);
+    fresh.grid[segIdx].add(benchId);
+    const result = await MatchModel.applySegmentGrid(_currentMatchId, fresh, fresh.grid, fresh.pins);
+    if (!result) alert('Kon de wissel niet doorvoeren.');
+    await _renderAll();
+  }
+
+  function _renderFieldBench() {
+    if (!_cachedMatch || !_segmentInfo) { LineupView.renderFieldBench([], _cachedMatch); return; }
+    const segIdx = _segmentIndexForMinute();
+    const onFieldIds = new Set((_currentPositions || []).map(p => p.playerId).filter(Boolean));
+    const items = _segmentInfo.subEligible
+      .filter(p => !onFieldIds.has(p.id))
+      .map(p => ({
+        player: p,
+        blocked: !_canSwapBench(p.id, segIdx),
+        selected: _selected?.kind === 'bench' && _selected.playerId === p.id,
+      }));
+    LineupView.renderFieldBench(items, _cachedMatch);
   }
 
   function showMinute(minute, btn) {
     _currentMinute = minute;
-    _selectedPosIndex = null;
+    _selected = null;
     document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     _renderField();
+    _renderFieldBench();
   }
 
   async function toggleNoSub(playerId) {
@@ -204,5 +310,5 @@ const LineupController = (() => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  return { init, refresh, showMinute, toggleNoSub, toggleMatrixCell, applyMatrix, shareViaWhatsapp };
+  return { init, refresh, showMinute, toggleNoSub, toggleMatrixCell, applyMatrix, selectBench, shareViaWhatsapp };
 })();

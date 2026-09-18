@@ -405,8 +405,11 @@
             </div>
             <div id="lineup-info" class="lineup-info"></div>
             <div id="period-nav" class="period-nav"></div>
-            <div id="switch-matrix"></div>
 
+            <details class="lineup-fold">
+              <summary class="lineup-fold-summary">Wie staat wanneer?</summary>
+              <div id="switch-matrix" class="lineup-fold-body"></div>
+            </details>
             <details class="lineup-fold">
               <summary class="lineup-fold-summary">Geen wissel</summary>
               <div id="no-sub-section" class="lineup-fold-body no-sub-section"></div>
@@ -429,6 +432,7 @@
           </div>
           <div class="lineup-field-wrapper">
             <svg id="lineup-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div id="field-bench" class="field-bench"></div>
           </div>
         </div>
       </section>

@@ -688,8 +688,25 @@ details[open] .matches-played-summary::before { transform: rotate(90deg); }
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
 }
-.lineup-field-wrapper { display: flex; justify-content: center; }
+.lineup-field-wrapper { display: flex; flex-direction: column; align-items: center; }
 .field-svg { width: 100%; max-width: 520px; border-radius: var(--radius); touch-action: auto; }
+
+/* ── Wisselbank onder het veld: tik een icoon, dan een speler op het veld ── */
+.field-bench { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; max-width: 520px; }
+.field-bench-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; border-radius: var(--radius-sm);
+  padding: 5px 4px; cursor: pointer; transition: background .15s;
+}
+.field-bench-item:hover { background: var(--bg-elevated); }
+.field-bench-item.selected { background: rgba(170,238,0,.15); }
+.field-bench-item.selected .share-mini-avatar { box-shadow: 0 0 0 2px var(--accent); }
+.field-bench-item.blocked { opacity: .35; cursor: not-allowed; }
+.field-bench-item.blocked:hover { background: none; }
+.field-bench-name {
+  font-size: .66rem; color: var(--text-muted); max-width: 56px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 .lineup-info {
   background: var(--bg-elevated); border: 1px solid var(--border);

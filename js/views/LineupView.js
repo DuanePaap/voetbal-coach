@@ -113,7 +113,7 @@ const LineupView = (() => {
       `<span class="matrix-count${s.size !== required ? ' bad' : ''}">${s.size}/${required}</span>`).join('');
 
     el.innerHTML = `
-      <h4>Wie staat wanneer? <span class="matrix-hint-inline">(tik voor aan/uit, nogmaals = 📌 vast)</span></h4>
+      <p class="matrix-hint">Tik voor aan/uit, nogmaals tikken = 📌 vast.</p>
       <div class="matrix-grid" style="--matrix-cols:${numSegments}">
         <div class="matrix-row matrix-header"><span class="matrix-name"></span>${header}</div>
         ${rows}
@@ -152,6 +152,27 @@ const LineupView = (() => {
     }).join('');
 
     container.innerHTML = rows;
+  }
+
+  // Wisselbank onder het veld: spelers die op dit moment níet op het veld staan.
+  // Tik-om-te-wisselen met een speler op het veld — geblokkeerd (grijs, niet
+  // klikbaar) als "Geen wissel" of een vergrendeling in "Wie staat wanneer?" dat
+  // voor dit blok verbiedt. `items` = [{ player, blocked, selected }], al bepaald
+  // door de controller (die de matrix-pin-state bezit).
+  function renderFieldBench(items, match) {
+    const el = document.getElementById('field-bench');
+    if (!el) return;
+    if (!items.length) { el.innerHTML = ''; return; }
+    el.innerHTML = items.map(({ player: p, blocked, selected }) => {
+      const posCode = p.mainPosition || (p.preferredPositions || [])[0] || null;
+      const cls = ['field-bench-item', selected ? 'selected' : '', blocked ? 'blocked' : ''].filter(Boolean).join(' ');
+      const title = blocked ? 'Geblokkeerd door "Geen wissel" of "Wie staat wanneer?"' : 'Tik om te wisselen met een speler op het veld';
+      return `
+        <button type="button" class="${cls}" ${blocked ? 'disabled' : ''} onclick="LineupController.selectBench('${p.id}')" title="${title}">
+          ${_miniAvatar(p, posCode)}
+          <span class="field-bench-name">${_captainBadge(p.id, match)}${_esc(p.name.split(' ')[0])}</span>
+        </button>`;
+    }).join('');
   }
 
   function getPositionsAtMinute(match, players, formation, minute) {
@@ -275,5 +296,5 @@ const LineupView = (() => {
     el.innerHTML = `<h4>Wedstrijdinfo</h4>${rows.join('')}`;
   }
 
-  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, renderSubsPanel, renderMatchExtras, getPositionsAtMinute };
+  return { populateMatchSelect, renderInfo, renderNoSubPicker, renderPeriodNav, renderSubstitutionTimeline, renderSwitchMatrix, renderBench, renderFieldBench, renderSubsPanel, renderMatchExtras, getPositionsAtMinute };
 })();
