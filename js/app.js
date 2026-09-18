@@ -22,6 +22,7 @@
         LineupController.init(),
         GamePlanController.init(),
         TeamCoachesController.init(),
+        StatsController.init(),
       ];
       if (_isAdmin()) {
         document.getElementById('nav-btn-admin').style.display = '';
@@ -216,6 +217,7 @@
         if (btn.dataset.page === 'wedstrijden') MatchController.refresh();
         if (btn.dataset.page === 'opstelling') LineupController.refresh();
         if (btn.dataset.page === 'gameplan') GamePlanController.refresh();
+        if (btn.dataset.page === 'statistieken') StatsController.refresh();
       });
     });
 
