@@ -7,7 +7,9 @@ const StatsController = (() => {
 
   async function refresh() {
     const [matches, players] = await Promise.all([MatchModel.getAll(), PlayerModel.getAll()]);
-    _render(_computeStats(matches, players));
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const played = matches.filter(m => m.date <= todayStr);
+    _render(_computeStats(played, players));
   }
 
   // Telt per speler hoe vaak hij aanvoerder/scheidsrechter/grensrechter/teamfruit
