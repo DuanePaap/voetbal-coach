@@ -148,7 +148,7 @@ const AdminController = (() => {
       return;
     }
     tbody.innerHTML = coaches.map(c => {
-      const created = new Date(c.createdAt).toLocaleDateString('nl-NL');
+      const created = new Date(Number(c.createdAt)).toLocaleDateString('nl-NL');
       const statusBadge = c.blocked
         ? '<span class="status-badge status-inactive">Geblokkeerd</span>'
         : '<span class="status-badge status-active">Actief</span>';
