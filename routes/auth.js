@@ -2,9 +2,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { randomUUID } = require('crypto');
+const { randomUUID, randomBytes } = require('crypto');
 const { sql } = require('../db/database');
 const { getJwtSecret } = require('../middleware/jwtSecret');
+const { sendPasswordResetEmail } = require('../services/email');
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // max 1 uur geldig
 
 const router = express.Router();
 
@@ -85,6 +88,62 @@ router.post('/player-login', async (req, res) => {
     res.json({ token, player: { id: row.player_id, name: row.player_name, photo: row.player_photo, coachId: row.coach_id } });
   } catch (err) {
     console.error('Player login error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+// Altijd hetzelfde generieke antwoord, ongeacht of het e-mailadres bestaat —
+// voorkomt dat deze route gebruikt kan worden om te ontdekken welke
+// e-mailadressen een account hebben (account-enumeratie).
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const emailLower = (req.body.email || '').toLowerCase().trim();
+    if (!emailLower) return res.status(400).json({ error: 'Vul een e-mailadres in' });
+
+    const { rows: [coach] } = await sql`SELECT id, name FROM coaches WHERE email = ${emailLower}`;
+    if (coach) {
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + RESET_TOKEN_TTL_MS;
+      await sql`DELETE FROM password_resets WHERE coach_id = ${coach.id}`;
+      await sql`INSERT INTO password_resets (token, coach_id, expires_at, created_at)
+                VALUES (${token}, ${coach.id}, ${expiresAt}, ${Date.now()})`;
+      const origin = `${req.protocol}://${req.get('host')}`;
+      await sendPasswordResetEmail(emailLower, coach.name, token, origin)
+        .catch(err => console.error('Password reset email error:', err));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const { rows: [row] } = await sql`SELECT expires_at FROM password_resets WHERE token = ${req.params.token}`;
+    if (!row || Number(row.expires_at) < Date.now()) return res.status(400).json({ error: 'Deze link is ongeldig of verlopen' });
+    res.json({ valid: true });
+  } catch (err) {
+    console.error('Validate reset token error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Ongeldig verzoek' });
+    if (password.length < 6) return res.status(400).json({ error: 'Wachtwoord minimaal 6 tekens' });
+
+    const { rows: [row] } = await sql`SELECT coach_id, expires_at FROM password_resets WHERE token = ${token}`;
+    if (!row || Number(row.expires_at) < Date.now()) return res.status(400).json({ error: 'Deze link is ongeldig of verlopen' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await sql`UPDATE coaches SET password_hash = ${hash} WHERE id = ${row.coach_id}`;
+    await sql`DELETE FROM password_resets WHERE token = ${token}`;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Reset password error:', err);
     res.status(500).json({ error: 'Server fout' });
   }
 });

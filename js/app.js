@@ -37,6 +37,31 @@
     document.getElementById('app-root').style.display = 'none';
     document.getElementById('player-app').style.display = 'none';
     _bindAuthForms();
+    _checkPasswordReset();
+  }
+
+  // Als de URL een ?reset=<token> bevat (vanuit de e-mail link), meteen het
+  // reset-wachtwoord-paneel tonen i.p.v. het normale inlogscherm, en de token
+  // vast valideren zodat een verlopen/ongeldige link direct duidelijk is.
+  async function _checkPasswordReset() {
+    const token = new URLSearchParams(location.search).get('reset');
+    if (!token) return;
+
+    document.getElementById('auth-login').style.display = 'none';
+    document.getElementById('auth-register').style.display = 'none';
+    document.getElementById('auth-player-login').style.display = 'none';
+    document.getElementById('auth-forgot').style.display = 'none';
+    document.getElementById('auth-reset').style.display = 'block';
+    document.getElementById('reset-token').value = token;
+
+    try {
+      await AuthModel.validateResetToken(token);
+    } catch (ex) {
+      document.getElementById('form-reset').style.display = 'none';
+      const invalid = document.getElementById('reset-invalid');
+      invalid.textContent = ex.message;
+      invalid.style.display = 'block';
+    }
   }
 
   function _showCoachApp() {
@@ -82,6 +107,14 @@
       document.getElementById('auth-player-login').style.display = 'none';
       document.getElementById('auth-login').style.display = 'block';
     });
+    document.querySelector('.auth-forgot')?.addEventListener('click', () => {
+      document.getElementById('auth-login').style.display = 'none';
+      document.getElementById('auth-forgot').style.display = 'block';
+    });
+    document.getElementById('show-login-from-forgot')?.addEventListener('click', () => {
+      document.getElementById('auth-forgot').style.display = 'none';
+      document.getElementById('auth-login').style.display = 'block';
+    });
 
     // Coach login
     document.getElementById('form-login')?.addEventListener('submit', async e => {
@@ -110,6 +143,40 @@
         );
         location.reload();
       } catch (ex) { err.textContent = ex.message; }
+    });
+
+    // Wachtwoord vergeten — vraag een reset-link aan
+    document.getElementById('form-forgot')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('forgot-error');
+      const success = document.getElementById('forgot-success');
+      err.textContent = '';
+      success.style.display = 'none';
+      try {
+        await AuthModel.requestPasswordReset(document.getElementById('forgot-email').value);
+        success.style.display = 'block';
+        document.getElementById('form-forgot').reset();
+      } catch (ex) { err.textContent = ex.message; }
+    });
+
+    // Nieuw wachtwoord instellen (via de link uit de e-mail)
+    document.getElementById('form-reset')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('reset-error');
+      err.textContent = '';
+      try {
+        await AuthModel.resetPassword(
+          document.getElementById('reset-token').value,
+          document.getElementById('reset-password').value
+        );
+        document.getElementById('form-reset').style.display = 'none';
+        document.getElementById('reset-success').style.display = 'block';
+      } catch (ex) { err.textContent = ex.message; }
+    });
+    document.getElementById('btn-reset-to-login')?.addEventListener('click', () => {
+      history.replaceState(null, '', location.pathname);
+      document.getElementById('auth-reset').style.display = 'none';
+      document.getElementById('auth-login').style.display = 'block';
     });
 
     // Player code login

@@ -135,6 +135,15 @@ async function migrate() {
     )
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      token TEXT PRIMARY KEY,
+      coach_id TEXT NOT NULL,
+      expires_at BIGINT NOT NULL,
+      created_at BIGINT NOT NULL,
+      FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE
+    )
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS team_coaches (
       id TEXT PRIMARY KEY,
       team_id TEXT NOT NULL,

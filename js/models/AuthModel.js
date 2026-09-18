@@ -46,5 +46,12 @@ const AuthModel = (() => {
     location.reload();
   }
 
-  return { getToken, getUser, getCoach, isLoggedIn, isPlayer, register, login, loginWithCode, logout };
+  async function requestPasswordReset(email) { return API.post('/api/auth/forgot-password', { email }); }
+  async function validateResetToken(token)   { return API.get(`/api/auth/reset-password/${token}`); }
+  async function resetPassword(token, password) { return API.post('/api/auth/reset-password', { token, password }); }
+
+  return {
+    getToken, getUser, getCoach, isLoggedIn, isPlayer, register, login, loginWithCode, logout,
+    requestPasswordReset, validateResetToken, resetPassword,
+  };
 })();

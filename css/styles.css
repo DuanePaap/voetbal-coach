@@ -311,6 +311,9 @@ select option { background: var(--bg-card); }
 .auth-error {
   color: var(--red); font-size: .82rem; min-height: 1.1em; margin-bottom: 10px;
 }
+.auth-success {
+  color: var(--accent); font-size: .82rem; margin-bottom: 14px; line-height: 1.5;
+}
 
 /* ── Primary CTA button ── */
 .auth-btn-primary {

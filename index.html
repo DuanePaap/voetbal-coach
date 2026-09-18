@@ -76,6 +76,58 @@
             <p class="auth-register-link">Nog geen account? <button class="auth-link" id="show-register">Registreren</button></p>
           </div>
 
+          <!-- ── Wachtwoord vergeten ── -->
+          <div id="auth-forgot" style="display:none">
+            <div class="auth-brand">
+              <img src="logo.svg" alt="TACTIX26" class="auth-brand-logo">
+            </div>
+            <h2 class="auth-welcome">Wachtwoord vergeten?</h2>
+            <p class="auth-welcome-sub">Vul je e-mailadres in — we sturen je een link om een nieuw wachtwoord in te stellen.</p>
+            <form id="form-forgot">
+              <div class="auth-field">
+                <span class="auth-field-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </span>
+                <input type="email" id="forgot-email" required placeholder="E-mailadres" autocomplete="email">
+              </div>
+              <p id="forgot-error" class="auth-error"></p>
+              <p id="forgot-success" class="auth-success" style="display:none">Als dit e-mailadres bekend is, is er een e-mail verstuurd met een link om je wachtwoord te resetten.</p>
+              <button type="submit" class="auth-btn-primary">
+                VERSTUUR LINK
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </form>
+            <p class="auth-register-link" style="margin-top:24px"><button class="auth-link" id="show-login-from-forgot">&#x2190; Terug naar inloggen</button></p>
+          </div>
+
+          <!-- ── Nieuw wachtwoord instellen (via e-mail link) ── -->
+          <div id="auth-reset" style="display:none">
+            <div class="auth-brand">
+              <img src="logo.svg" alt="TACTIX26" class="auth-brand-logo">
+            </div>
+            <h2 class="auth-welcome">Nieuw wachtwoord instellen</h2>
+            <p class="auth-welcome-sub">Kies een nieuw wachtwoord voor je account.</p>
+            <form id="form-reset">
+              <input type="hidden" id="reset-token">
+              <div class="auth-field">
+                <span class="auth-field-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" id="reset-password" required placeholder="Nieuw wachtwoord (min. 6 tekens)" minlength="6" autocomplete="new-password">
+              </div>
+              <p id="reset-error" class="auth-error"></p>
+              <button type="submit" class="auth-btn-primary">
+                WACHTWOORD WIJZIGEN
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </form>
+            <p id="reset-invalid" class="auth-error" style="display:none"></p>
+            <div id="reset-success" style="display:none">
+              <p class="auth-success">Je wachtwoord is gewijzigd. Je kunt nu inloggen.</p>
+              <button type="button" class="auth-btn-primary" id="btn-reset-to-login">NAAR INLOGGEN</button>
+            </div>
+          </div>
+
           <!-- ── Player login ── -->
           <div id="auth-player-login" style="display:none">
             <div class="auth-brand">
