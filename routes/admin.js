@@ -116,4 +116,37 @@ router.delete('/coaches/:id', async (req, res) => {
   }
 });
 
+// Overzicht van wat een coach zelf heeft aangemaakt (coach_id = "aangemaakt door",
+// blijft correct ook voor teams die met een andere coach gedeeld worden — zie de
+// meerdere-coaches-per-team feature).
+router.get('/coaches/:id/overview', async (req, res) => {
+  try {
+    const { rows: [target] } = await sql`SELECT id FROM coaches WHERE id = ${req.params.id}`;
+    if (!target) return res.status(404).json({ error: 'Coach niet gevonden' });
+
+    const [teams, players, matches] = await Promise.all([
+      sql`SELECT id, name, is_default, created_at FROM teams WHERE coach_id = ${req.params.id} ORDER BY created_at ASC`,
+      sql`
+        SELECT p.id, p.name, p.team_id, t.name AS team_name, p.created_at
+        FROM players p LEFT JOIN teams t ON t.id = p.team_id
+        WHERE p.coach_id = ${req.params.id} ORDER BY p.name ASC
+      `,
+      sql`
+        SELECT m.id, m.opponent, m.date, m.team_id, t.name AS team_name, m.created_at
+        FROM matches m LEFT JOIN teams t ON t.id = m.team_id
+        WHERE m.coach_id = ${req.params.id} ORDER BY m.date DESC
+      `,
+    ]);
+
+    res.json({
+      teams: teams.rows.map(r => ({ id: r.id, name: r.name, isDefault: r.is_default, createdAt: r.created_at })),
+      players: players.rows.map(r => ({ id: r.id, name: r.name, teamId: r.team_id, teamName: r.team_name, createdAt: r.created_at })),
+      matches: matches.rows.map(r => ({ id: r.id, opponent: r.opponent, date: r.date, teamId: r.team_id, teamName: r.team_name, createdAt: r.created_at })),
+    });
+  } catch (err) {
+    console.error('Admin coach overview error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
 module.exports = router;

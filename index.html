@@ -555,6 +555,23 @@
         </div>
       </section>
 
+      <!-- Coach-overzicht lightbox -->
+      <div class="modal" id="coach-overview-modal">
+        <div class="modal-backdrop" onclick="AdminController.closeOverview()"></div>
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 id="coach-overview-title">Overzicht</h2>
+            <button class="modal-close" onclick="AdminController.closeOverview()">&times;</button>
+          </div>
+          <div class="toggle-group" id="coach-overview-tabs">
+            <button type="button" class="toggle-btn active" data-tab="teams">Teams</button>
+            <button type="button" class="toggle-btn" data-tab="players">Spelers</button>
+            <button type="button" class="toggle-btn" data-tab="matches">Wedstrijden</button>
+          </div>
+          <div id="coach-overview-body" class="overview-body"></div>
+        </div>
+      </div>
+
     </main>
   </div>
 

@@ -1,6 +1,9 @@
 const AdminController = (() => {
   let _savedImage  = null;
   let _pendingImage = null;
+  let _coaches = [];
+  let _overviewData = null;
+  let _overviewTab = 'teams';
 
   async function init() {
     await _load();
@@ -63,6 +66,15 @@ const AdminController = (() => {
 
     saveBtn?.addEventListener('click',  _save);
     resetBtn?.addEventListener('click', _reset);
+
+    document.querySelectorAll('#coach-overview-tabs .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#coach-overview-tabs .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _overviewTab = btn.dataset.tab;
+        _renderOverviewTab();
+      });
+    });
   }
 
   function _processFile(file) {
@@ -133,6 +145,7 @@ const AdminController = (() => {
     if (el) el.textContent = '';
     try {
       const coaches = await API.get('/api/admin/coaches');
+      _coaches = coaches;
       _renderCoaches(coaches);
     } catch (err) {
       console.error('Admin load coaches error:', err);
@@ -156,6 +169,7 @@ const AdminController = (() => {
         ? '<span style="color:var(--text-dim);font-size:.78rem">— admin —</span>'
         : `
           <div class="table-actions">
+            <button class="table-action-btn" onclick="AdminController.viewOverview('${c.id}')" title="Teams, spelers en wedstrijden bekijken">👁</button>
             <button class="table-action-btn" onclick="AdminController.editCoachEmail('${c.id}')" title="E-mail wijzigen">✏️</button>
             <button class="table-action-btn" onclick="AdminController.toggleCoachBlock('${c.id}', ${c.blocked})" title="${c.blocked ? 'Deblokkeren' : 'Blokkeren'}">${c.blocked ? '🔓' : '🔒'}</button>
             <button class="table-action-btn" onclick="AdminController.removeCoach('${c.id}')" title="Verwijderen">🗑</button>
@@ -207,5 +221,64 @@ const AdminController = (() => {
     }
   }
 
-  return { init, editCoachEmail, toggleCoachBlock, removeCoach };
+  // ── Coach-overzicht lightbox (teams/spelers/wedstrijden die deze coach zelf
+  // heeft aangemaakt — coach_id blijft "aangemaakt door", ook voor gedeelde teams) ──
+  function _fmtDate(ts) {
+    return new Date(Number(ts)).toLocaleDateString('nl-NL');
+  }
+
+  async function viewOverview(id) {
+    const coach = _coaches.find(c => c.id === id);
+    const titleEl = document.getElementById('coach-overview-title');
+    if (titleEl) titleEl.textContent = coach ? `Overzicht — ${coach.name}` : 'Overzicht';
+    document.getElementById('coach-overview-modal')?.classList.add('open');
+
+    _overviewTab = 'teams';
+    document.querySelectorAll('#coach-overview-tabs .toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'teams'));
+    const bodyEl = document.getElementById('coach-overview-body');
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-muted)">Laden…</p>';
+
+    try {
+      _overviewData = await API.get(`/api/admin/coaches/${id}/overview`);
+      _renderOverviewTab();
+    } catch (err) {
+      if (bodyEl) bodyEl.innerHTML = `<p class="auth-error">${_esc(err.message)}</p>`;
+    }
+  }
+
+  function closeOverview() {
+    document.getElementById('coach-overview-modal')?.classList.remove('open');
+    _overviewData = null;
+  }
+
+  function _renderOverviewTab() {
+    const el = document.getElementById('coach-overview-body');
+    if (!el || !_overviewData) return;
+    const rows = _overviewData[_overviewTab] || [];
+    if (!rows.length) {
+      el.innerHTML = '<p style="color:var(--text-muted)">Niets gevonden.</p>';
+      return;
+    }
+    if (_overviewTab === 'teams') {
+      el.innerHTML = rows.map(t => `
+        <div class="overview-row">
+          <span>${_esc(t.name)}${t.isDefault ? ' <span style="color:var(--text-dim);font-size:.72rem">(standaard)</span>' : ''}</span>
+          <span class="overview-date">${_fmtDate(t.createdAt)}</span>
+        </div>`).join('');
+    } else if (_overviewTab === 'players') {
+      el.innerHTML = rows.map(p => `
+        <div class="overview-row">
+          <span>${_esc(p.name)}</span>
+          <span class="overview-meta">${_esc(p.teamName || '—')}</span>
+        </div>`).join('');
+    } else {
+      el.innerHTML = rows.map(m => `
+        <div class="overview-row">
+          <span>vs ${_esc(m.opponent)}</span>
+          <span class="overview-meta">${_esc(m.teamName || '—')} · ${new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL')}</span>
+        </div>`).join('');
+    }
+  }
+
+  return { init, editCoachEmail, toggleCoachBlock, removeCoach, viewOverview, closeOverview };
 })();
