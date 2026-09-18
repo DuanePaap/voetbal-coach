@@ -1,7 +1,13 @@
 const StatsController = (() => {
+  // Statistieken staat bewust niet in het menu — alleen bereikbaar via de knop
+  // op de Spelers-pagina, dus hier direct van pagina wisselen i.p.v. via een
+  // (niet-bestaande) nav-tab.
   async function init() {
     document.getElementById('btn-view-stats')?.addEventListener('click', () => {
-      document.querySelector('.nav-btn[data-page="statistieken"]')?.click();
+      document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-statistieken')?.classList.add('active');
+      refresh();
     });
   }
 

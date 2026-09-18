@@ -217,7 +217,6 @@
         if (btn.dataset.page === 'wedstrijden') MatchController.refresh();
         if (btn.dataset.page === 'opstelling') LineupController.refresh();
         if (btn.dataset.page === 'gameplan') GamePlanController.refresh();
-        if (btn.dataset.page === 'statistieken') StatsController.refresh();
       });
     });
 
