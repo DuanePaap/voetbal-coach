@@ -19,9 +19,10 @@ const StatsController = (() => {
   }
 
   // Telt per speler hoe vaak hij aanvoerder/scheidsrechter/grensrechter/teamfruit
-  // was, en hoe vaak hij bij een aanwezige wedstrijd niet in de basis stond
-  // ("wissel") — alleen meegeteld voor wedstrijden waar al een opstelling voor
-  // gegenereerd is, anders is er nog geen basis/wissel-indeling bekend.
+  // was, en hoe vaak hij bij een aanwezige wedstrijd gewisseld is — dat is niet
+  // hetzelfde als "niet in de basis": iemand die wél startte maar tussentijds
+  // gewisseld werd, telt ook mee. Alleen meegeteld voor wedstrijden waar al een
+  // opstelling voor gegenereerd is, anders is er nog geen indeling bekend.
   function _computeStats(matches, players) {
     const byId = {};
     players.forEach(p => {
@@ -31,13 +32,17 @@ const StatsController = (() => {
     matches.forEach(m => {
       const present = m.presentPlayers || [];
       const hasLineup = (m.lineup || []).length > 0;
-      const starters = new Set((m.lineup || []).filter(l => l.startMinute === 0).map(l => l.playerId));
+      const totalDuration = m.duration || 60;
+      const minutesOn = {};
+      (m.lineup || []).forEach(l => {
+        minutesOn[l.playerId] = (minutesOn[l.playerId] || 0) + (l.endMinute - l.startMinute);
+      });
 
       present.forEach(pid => {
         const row = byId[pid];
         if (!row) return; // speler intussen verwijderd
         row.present++;
-        if (hasLineup && !starters.has(pid)) row.bench++;
+        if (hasLineup && (minutesOn[pid] || 0) < totalDuration) row.bench++;
       });
 
       if (m.captainPlayerId  && byId[m.captainPlayerId])  byId[m.captainPlayerId].captain++;

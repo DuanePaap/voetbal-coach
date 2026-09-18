@@ -130,12 +130,11 @@ const LineupView = (() => {
     const container = document.getElementById('bench-list');
     if (!match) { container.innerHTML = ''; return; }
 
-    // Calculate bench players: those not starting (not in lineup at minute 0)
-    const starters = new Set((match.lineup || []).filter(l => l.startMinute === 0).map(l => l.playerId));
     const present = players.filter(p => (match.presentPlayers || []).includes(p.id));
-    const bench = present.filter(p => !starters.has(p.id));
+    const hasLineup = (match.lineup || []).length > 0;
+    const totalDuration = match.duration || 60;
 
-    // Calculate total minutes each player is on the field
+    // Total minutes each player is on the field
     const minutesOn = {};
     (match.lineup || []).forEach(l => {
       minutesOn[l.playerId] = (minutesOn[l.playerId] || 0) + (l.endMinute - l.startMinute);
@@ -143,11 +142,15 @@ const LineupView = (() => {
 
     const rows = present.map(p => {
       const mins = minutesOn[p.id] || 0;
-      const isStarter = starters.has(p.id);
+      // 🟢 alleen als de speler écht de hele wedstrijd ononderbroken heeft
+      // gespeeld — niet alleen "in de basis begonnen", want dan kreeg iemand
+      // die tussentijds gewisseld werd ten onrechte hetzelfde icoon als iemand
+      // die nooit gewisseld is.
+      const wasSubbed = hasLineup && mins < totalDuration;
       return `
         <div class="bench-row">
           <span>${_captainBadge(p.id, match)}${p.name.split(' ')[0]}</span>
-          <span class="bench-minutes">${mins}'${isStarter ? ' 🟢' : ' 🔄'}</span>
+          <span class="bench-minutes">${mins}'${wasSubbed ? ' 🔄' : ' 🟢'}</span>
         </div>`;
     }).join('');
 
