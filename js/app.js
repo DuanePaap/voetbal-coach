@@ -197,6 +197,50 @@
       el.classList.remove('open');
       el.setAttribute('aria-expanded', 'false');
     });
+    document.querySelectorAll('.user-menu.open').forEach(el => el.classList.remove('open'));
+    document.getElementById('user-menu-trigger')?.setAttribute('aria-expanded', 'false');
+  }
+
+  function _initUserMenu() {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu');
+    if (!trigger || !menu) return;
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const opening = !menu.classList.contains('open');
+      _closeMenus();
+      if (opening) {
+        menu.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+    });
+    menu.addEventListener('click', e => {
+      if (e.target.closest('.user-menu-item')) _closeMenus();
+    });
+  }
+
+  function _openSettingsModal() {
+    const coach = AuthModel.getUser();
+    document.getElementById('settings-name').value = coach?.name || '';
+    document.getElementById('settings-name-error').textContent = '';
+    const currentTheme = localStorage.getItem('vc_theme') === 'light' ? 'light' : 'dark';
+    document.querySelectorAll('#settings-theme-toggle .toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.themeChoice === currentTheme);
+    });
+    document.getElementById('settings-modal').classList.add('open');
+  }
+
+  function _closeSettingsModal() {
+    document.getElementById('settings-modal').classList.remove('open');
+  }
+
+  function _applyTheme(theme) {
+    if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('vc_theme', theme);
+    document.querySelectorAll('#settings-theme-toggle .toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.themeChoice === theme);
+    });
   }
 
   function _initHamburger(hamburgerId, linksId) {
@@ -262,6 +306,7 @@
     // Hamburger menus
     _initHamburger('nav-hamburger', 'nav-links');
     _initHamburger('player-nav-hamburger', 'player-nav-links');
+    _initUserMenu();
 
     // Als in een ander tabblad van team gewisseld wordt, dit tabblad ook verversen
     window.addEventListener('storage', e => {
@@ -299,6 +344,27 @@
     });
 
     document.getElementById('btn-logout')?.addEventListener('click', () => AuthModel.logout());
+
+    // Instellingen
+    document.getElementById('menu-settings')?.addEventListener('click', _openSettingsModal);
+    document.getElementById('settings-modal-close')?.addEventListener('click', _closeSettingsModal);
+    document.getElementById('settings-modal-backdrop')?.addEventListener('click', _closeSettingsModal);
+    document.getElementById('form-settings-name')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('settings-name-error');
+      err.textContent = '';
+      try {
+        const updated = await AuthModel.updateName(document.getElementById('settings-name').value);
+        document.getElementById('coach-name').textContent = updated.name;
+        document.getElementById('coach-avatar').textContent = updated.name.charAt(0).toUpperCase();
+      } catch (ex) { err.textContent = ex.message; }
+    });
+    document.querySelectorAll('#settings-theme-toggle .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => _applyTheme(btn.dataset.themeChoice));
+    });
+
+    // Over Tactix26
+    document.getElementById('menu-about')?.addEventListener('click', () => { location.href = '/about.html'; });
 
     // Password visibility toggle
     document.getElementById('toggle-pw')?.addEventListener('click', () => {

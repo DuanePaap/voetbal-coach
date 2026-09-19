@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Over Tactix26</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#070B10">
+</head>
+<body>
+
+  <div class="share-page">
+    <header class="share-header">
+      <img src="logo.svg" alt="TACTIX26" class="share-header-logo">
+    </header>
+
+    <div id="about-content" class="about-box">
+      <p>Laden…</p>
+    </div>
+
+    <div class="about-box">
+      <h4>Contact</h4>
+      <form id="form-contact">
+        <div class="form-group">
+          <label>Naam</label>
+          <input type="text" id="contact-name" required>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="contact-email" required>
+        </div>
+        <div class="form-group">
+          <label>Bericht</label>
+          <textarea id="contact-message" rows="5" required></textarea>
+        </div>
+        <p id="contact-error" class="auth-error"></p>
+        <p id="contact-success" class="auth-success" style="display:none">Bedankt voor je bericht — we nemen zo snel mogelijk contact op.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">Verstuur</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/no-pinch-zoom.js"></script>
+  <script src="js/about.js"></script>
+</body>
+</html>

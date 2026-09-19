@@ -50,8 +50,15 @@ const AuthModel = (() => {
   async function validateResetToken(token)   { return API.get(`/api/auth/reset-password/${token}`); }
   async function resetPassword(token, password) { return API.post('/api/auth/reset-password', { token, password }); }
 
+  async function updateName(name) {
+    const res = await API.put('/api/auth/me', { name });
+    const updated = { ...getUser(), name: res.name };
+    localStorage.setItem(C, JSON.stringify(updated));
+    return updated;
+  }
+
   return {
     getToken, getUser, getCoach, isLoggedIn, isPlayer, register, login, loginWithCode, logout,
-    requestPasswordReset, validateResetToken, resetPassword,
+    requestPasswordReset, validateResetToken, resetPassword, updateName,
   };
 })();

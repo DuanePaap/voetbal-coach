@@ -9,6 +9,7 @@ const AdminController = (() => {
     await _load();
     _bindEvents();
     await _loadCoaches();
+    await _loadAbout();
   }
 
   async function _load() {
@@ -280,5 +281,32 @@ const AdminController = (() => {
     }
   }
 
-  return { init, editCoachEmail, toggleCoachBlock, removeCoach, viewOverview, closeOverview };
+  // ── "Over Tactix26" — vrije tekst voor de publieke about-pagina ─────────
+  async function _loadAbout() {
+    try {
+      const data = await API.get('/api/admin/about');
+      const ta = document.getElementById('admin-about-content');
+      if (ta) ta.value = data.content || '';
+    } catch (err) {
+      console.error('Admin load about error:', err);
+    }
+  }
+
+  async function saveAbout() {
+    const btn = document.getElementById('btn-admin-about-save');
+    const err = document.getElementById('admin-about-error');
+    if (err) err.textContent = '';
+    const orig = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = 'Opslaan…'; }
+    try {
+      const content = document.getElementById('admin-about-content')?.value || '';
+      await API.post('/api/admin/about', { content });
+      if (btn) { btn.textContent = 'Opgeslagen ✓'; setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800); }
+    } catch (ex) {
+      if (btn) { btn.disabled = false; btn.textContent = orig; }
+      if (err) err.textContent = ex.message;
+    }
+  }
+
+  return { init, editCoachEmail, toggleCoachBlock, removeCoach, viewOverview, closeOverview, saveAbout };
 })();

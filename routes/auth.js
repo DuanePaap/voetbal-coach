@@ -6,6 +6,7 @@ const { randomUUID, randomBytes } = require('crypto');
 const { sql } = require('../db/database');
 const { getJwtSecret } = require('../middleware/jwtSecret');
 const { sendPasswordResetEmail } = require('../services/email');
+const coachAuth = require('../middleware/auth');
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // max 1 uur geldig
 
@@ -144,6 +145,21 @@ router.post('/reset-password', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+// Coach past alleen zijn eigen naam aan (geen e-mail/wachtwoord via deze route).
+// Geen nieuwe JWT nodig — de payload bevat de naam alleen voor weergavedoeleinden
+// en wordt client-side na een geslaagd verzoek in localStorage bijgewerkt.
+router.put('/me', coachAuth, async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Naam is verplicht' });
+    await sql`UPDATE coaches SET name = ${name} WHERE id = ${req.coach.id}`;
+    res.json({ id: req.coach.id, name });
+  } catch (err) {
+    console.error('Update profile error:', err);
     res.status(500).json({ error: 'Server fout' });
   }
 });

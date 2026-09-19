@@ -8,9 +8,12 @@ function _getFrom() {
   return process.env.RESEND_FROM || 'TACTIX26 <onboarding@resend.dev>';
 }
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, replyTo }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY is niet ingesteld');
+
+  const body = { from: _getFrom(), to: [to], subject, html };
+  if (replyTo) body.reply_to = replyTo;
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -18,7 +21,7 @@ async function sendEmail({ to, subject, html }) {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: _getFrom(), to: [to], subject, html }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -44,4 +47,14 @@ async function sendPasswordResetEmail(to, name, token, origin) {
   await sendEmail({ to, subject: 'Wachtwoord resetten — TACTIX26', html });
 }
 
-module.exports = { sendEmail, sendPasswordResetEmail };
+async function sendContactFormEmail(adminEmail, name, fromEmail, message) {
+  const html = `
+    <p>Nieuw contactformulier-bericht via tactix26.com:</p>
+    <p><strong>Naam:</strong> ${_escapeHtml(name)}<br>
+       <strong>E-mail:</strong> ${_escapeHtml(fromEmail)}</p>
+    <p>${_escapeHtml(message).replace(/\n/g, '<br>')}</p>
+  `;
+  await sendEmail({ to: adminEmail, subject: `Contactformulier: ${name}`, html, replyTo: fromEmail });
+}
+
+module.exports = { sendEmail, sendPasswordResetEmail, sendContactFormEmail };

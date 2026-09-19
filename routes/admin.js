@@ -149,4 +149,31 @@ router.get('/coaches/:id/overview', async (req, res) => {
   }
 });
 
+// "Over Tactix26" — vrije tekst-content voor de publieke about-pagina, zelfde
+// opslag-patroon als login_bg_image hierboven.
+router.get('/about', async (req, res) => {
+  try {
+    const { rows } = await sql`SELECT value FROM settings WHERE key = 'about_content'`;
+    res.json({ content: rows[0]?.value || '' });
+  } catch (err) {
+    console.error('Admin get about error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+router.post('/about', async (req, res) => {
+  try {
+    const content = String(req.body.content ?? '');
+    const now = Date.now();
+    await sql`
+      INSERT INTO settings (key, value, updated_at) VALUES ('about_content', ${content}, ${now})
+      ON CONFLICT (key) DO UPDATE SET value = ${content}, updated_at = ${now}
+    `;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Admin save about error:', err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
 module.exports = router;

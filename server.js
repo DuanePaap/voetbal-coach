@@ -49,6 +49,7 @@ app.use('/api/codes',     authMiddleware, teamScope,   require('./routes/codes')
 app.use('/api/player',                                 require('./routes/player'));
 app.use('/api/share',     shareLimiter,                require('./routes/share'));
 app.use('/api/admin',     authMiddleware.admin,        require('./routes/admin'));
+app.use('/api/about',                                  require('./routes/about'));
 
 // Public: login background image (no auth — used by the login page)
 app.get('/api/login-image', async (req, res) => {
