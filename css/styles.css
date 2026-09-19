@@ -658,6 +658,7 @@ select option { background: var(--bg-card); }
 .match-title { font-weight: 700; font-size: 1rem; color: var(--text); }
 .match-meta { font-size: .82rem; color: var(--text-muted); }
 .match-badge { padding: 3px 10px; border-radius: 4px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.badge-kwart { background: rgba(168,85,247,.12); color: #a855f7; border: 1px solid rgba(168,85,247,.28); }
 .badge-half  { background: rgba(245,158,11,.12); color: #f59e0b; border: 1px solid rgba(245,158,11,.28); }
 .badge-full  { background: rgba(59,141,255,.12);  color: #3B8DFF; border: 1px solid rgba(59,141,255,.28); }
 .badge-thuis { background: rgba(170,238,0,.1);   color: var(--accent); border: 1px solid rgba(170,238,0,.22); }

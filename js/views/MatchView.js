@@ -1,5 +1,12 @@
 const MatchView = (() => {
+  const FIELD_TYPE_BADGE = {
+    kwart: { cls: 'badge-kwart', label: '6-tallen' },
+    half:  { cls: 'badge-half',  label: '8-tallen' },
+    full:  { cls: 'badge-full',  label: '11-tallen' },
+  };
+
   function _cardHtml(m) {
+    const fieldBadge = FIELD_TYPE_BADGE[m.fieldType] || FIELD_TYPE_BADGE.half;
     const dateStr = new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
     const numPresent = (m.presentPlayers || []).length;
     const times = [];
@@ -13,7 +20,7 @@ const MatchView = (() => {
           <div class="match-meta">${dateStr}${timesStr} &bull; ${numPresent} spelers aanwezig</div>
           <div style="display:flex;gap:6px;margin-top:4px">
             <span class="match-badge ${m.location === 'thuis' ? 'badge-thuis' : 'badge-uit'}">${m.location === 'thuis' ? 'Thuis' : 'Uit'}</span>
-            <span class="match-badge ${m.fieldType === 'half' ? 'badge-half' : 'badge-full'}">${m.fieldType === 'half' ? '8-tallen' : '11-tallen'}</span>
+            <span class="match-badge ${fieldBadge.cls}">${fieldBadge.label}</span>
             <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.formation || '–'}</span>
             <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.periods || 2}× perioden</span>
             <span class="match-badge match-badge-extra" style="background:#e8ecf0;color:#445566">${m.duration || 60}′ &bull; ${m.subMoments || 2}× wisselen</span>

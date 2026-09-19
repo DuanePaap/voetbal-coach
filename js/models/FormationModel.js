@@ -3,6 +3,41 @@ const FormationModel = (() => {
   // Field: x 20–380, y 20–580. Attack = top (y=20), Defense = bottom (y=580)
 
   const FORMATIONS = {
+    kwart: {
+      '2-2-1': {
+        label: '2-2-1 (kwart veld)',
+        positions: [
+          { code: 'GK', x: 200, y: 540 },
+          { code: 'LB', x: 130, y: 440 },
+          { code: 'RB', x: 270, y: 440 },
+          { code: 'LM', x: 130, y: 320 },
+          { code: 'RM', x: 270, y: 320 },
+          { code: 'ST', x: 200, y: 200 },
+        ],
+      },
+      '1-3-1': {
+        label: '1-3-1 (kwart veld)',
+        positions: [
+          { code: 'GK', x: 200, y: 540 },
+          { code: 'CB', x: 200, y: 440 },
+          { code: 'LM', x: 100, y: 320 },
+          { code: 'CM', x: 200, y: 320 },
+          { code: 'RM', x: 300, y: 320 },
+          { code: 'ST', x: 200, y: 200 },
+        ],
+      },
+      '2-1-2': {
+        label: '2-1-2 (kwart veld)',
+        positions: [
+          { code: 'GK', x: 200, y: 540 },
+          { code: 'LB', x: 130, y: 440 },
+          { code: 'RB', x: 270, y: 440 },
+          { code: 'CM', x: 200, y: 340 },
+          { code: 'LW', x: 130, y: 210 },
+          { code: 'RW', x: 270, y: 210 },
+        ],
+      },
+    },
     half: {
       '1-3-3-1': {
         label: '1-3-3-1 (halve veld)',

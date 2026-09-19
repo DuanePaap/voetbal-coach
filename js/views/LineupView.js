@@ -9,6 +9,8 @@ const LineupView = (() => {
     select.innerHTML = sorted.map(m => `<option value="${m.id}">${new Date(m.date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} vs ${m.opponent}</option>`).join('');
   }
 
+  const FIELD_TYPE_LABEL = { kwart: 'Kwart veld', half: 'Halve veld', full: 'Heel veld' };
+
   function renderInfo(match, players) {
     const el = document.getElementById('lineup-info');
     if (!match) { el.innerHTML = ''; return; }
@@ -22,7 +24,7 @@ const LineupView = (() => {
     el.innerHTML = `
       <strong>vs ${match.opponent}</strong><br>
       ${new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL')}<br>
-      <span style="color:#666">${numPresent} aanwezig / ${numPositions} posities · ${match.fieldType === 'half' ? 'Halve veld' : 'Heel veld'}</span><br>
+      <span style="color:#666">${numPresent} aanwezig / ${numPositions} posities · ${FIELD_TYPE_LABEL[match.fieldType] || 'Halve veld'}</span><br>
       ${subBadge}
     `;
   }
