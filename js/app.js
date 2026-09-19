@@ -364,7 +364,7 @@
     });
 
     // Over Tactix26
-    document.getElementById('menu-about')?.addEventListener('click', () => { location.href = '/about.html'; });
+    document.getElementById('menu-about')?.addEventListener('click', () => { location.href = '/about'; });
 
     // Password visibility toggle
     document.getElementById('toggle-pw')?.addEventListener('click', () => {

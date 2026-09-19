@@ -63,6 +63,7 @@ html, body {
 .nav-brand {
   display: flex; align-items: center; flex-shrink: 0;
 }
+.brand-link { display: flex; align-items: center; text-decoration: none; }
 
 .nav-brand-logo { height: 26px; width: auto; display: block; }
 .nav-brand-logo-light { display: none; }

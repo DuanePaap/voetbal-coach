@@ -51,6 +51,9 @@ app.use('/api/share',     shareLimiter,                require('./routes/share')
 app.use('/api/admin',     authMiddleware.admin,        require('./routes/admin'));
 app.use('/api/about',                                  require('./routes/about'));
 
+// Publieke pagina zonder .html-extensie (tactix26.com/about i.p.v. /about.html)
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
+
 // Public: login background image (no auth — used by the login page)
 app.get('/api/login-image', async (req, res) => {
   try {
