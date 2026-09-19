@@ -6,6 +6,17 @@ const rateLimit = require('express-rate-limit');
 const { migrate, sql } = require('./db/database');
 
 const app = express();
+
+// tactix26.com is het nieuwe primaire domein — het oude Vercel-adres redirect
+// permanent, met behoud van pad + querystring, zodat al verstuurde deel-links
+// (share.html?t=...) blijven werken.
+const OLD_HOST = 'voetbal-coach.vercel.app';
+const NEW_HOST = 'tactix26.com';
+app.use((req, res, next) => {
+  if (req.hostname === OLD_HOST) return res.redirect(301, `https://${NEW_HOST}${req.originalUrl}`);
+  next();
+});
+
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
