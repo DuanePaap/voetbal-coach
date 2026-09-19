@@ -7,13 +7,14 @@ const { migrate, sql } = require('./db/database');
 
 const app = express();
 
-// tactix26.com is het nieuwe primaire domein — het oude Vercel-adres redirect
-// permanent, met behoud van pad + querystring, zodat al verstuurde deel-links
+// tactix26.com is het primaire domein — elk ander domein dat op dit project
+// wijst (oud Vercel-adres, www-subdomein) redirect permanent naar het kale
+// domein, met behoud van pad + querystring, zodat al verstuurde deel-links
 // (share.html?t=...) blijven werken.
-const OLD_HOST = 'voetbal-coach.vercel.app';
 const NEW_HOST = 'tactix26.com';
+const REDIRECT_HOSTS = new Set(['voetbal-coach.vercel.app', 'www.tactix26.com']);
 app.use((req, res, next) => {
-  if (req.hostname === OLD_HOST) return res.redirect(301, `https://${NEW_HOST}${req.originalUrl}`);
+  if (REDIRECT_HOSTS.has(req.hostname)) return res.redirect(301, `https://${NEW_HOST}${req.originalUrl}`);
   next();
 });
 
