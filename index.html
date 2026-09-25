@@ -473,14 +473,13 @@
             <p class="page-subtitle">Stel de basisopstelling in per wedstrijd</p>
           </div>
         </div>
+        <div class="form-group lineup-match-select-group">
+          <label>Selecteer wedstrijd</label>
+          <select id="lineup-match-select"></select>
+        </div>
         <div class="lineup-wrapper">
           <div class="lineup-sidebar">
-            <div class="form-group">
-              <label>Selecteer wedstrijd</label>
-              <select id="lineup-match-select"></select>
-            </div>
             <div id="lineup-info" class="lineup-info"></div>
-            <div id="period-nav" class="period-nav"></div>
 
             <details class="lineup-fold">
               <summary class="lineup-fold-summary">Wie staat wanneer?</summary>
@@ -509,6 +508,7 @@
           <div class="lineup-field-wrapper">
             <svg id="lineup-field" class="field-svg" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg"></svg>
             <div id="field-bench" class="field-bench"></div>
+            <div id="period-nav" class="period-nav period-nav-even"></div>
           </div>
         </div>
       </section>

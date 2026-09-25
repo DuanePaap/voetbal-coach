@@ -734,6 +734,7 @@ details[open] .matches-played-summary::before { transform: rotate(90deg); }
 .overview-meta, .overview-date { font-size: .74rem; color: var(--text-muted); flex-shrink: 0; }
 
 /* ===== LINEUP ===== */
+.lineup-match-select-group { max-width: 340px; margin-bottom: 16px; }
 .lineup-wrapper { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
 .lineup-sidebar {
   background: var(--bg-card); border: 1px solid var(--border);
@@ -803,15 +804,19 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
 .lock-btn:hover { border-color: var(--accent); }
 .lock-btn.locked { background: var(--accent); border-color: var(--accent); color: #070B10; }
 
-.period-nav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.period-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .period-btn {
-  padding: 5px 10px; border: 1px solid var(--border-light);
+  flex: 1 1 0; min-width: 0;
+  padding: 9px 6px; border: 1px solid var(--border-light);
   border-radius: var(--radius-sm); background: var(--bg-elevated);
-  cursor: pointer; font-size: .75rem; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; transition: all .15s;
+  cursor: pointer; font-size: .78rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; text-align: center; transition: all .15s;
 }
 .period-btn:hover { border-color: var(--accent); color: var(--accent); }
 .period-btn.active { background: var(--accent); border-color: var(--accent); color: #070B10; }
+
+/* Wissel-switcher onder het veld op de Opstelling-pagina */
+#period-nav.period-nav-even { width: 100%; max-width: 520px; margin: 10px 0 0; }
 
 /* ── Switch matrix: who's on the field in which block ── */
 .matrix-hint-inline { font-weight: 400; color: var(--text-muted); font-size: .68rem; text-transform: none; letter-spacing: 0; }
@@ -1032,6 +1037,7 @@ details[open] .lineup-fold-summary::before { transform: rotate(90deg); }
 @media (max-width: 960px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .lineup-wrapper, .gameplan-wrapper { grid-template-columns: 1fr; }
+  .lineup-match-select-group { max-width: none; }
   .lineup-field-wrapper, .gameplan-field-wrapper { order: -1; }
   .form-row { grid-template-columns: 1fr; }
 }

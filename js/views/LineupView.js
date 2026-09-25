@@ -22,8 +22,6 @@ const LineupView = (() => {
       ? `<span class="sub-count">⇄ ${numSubs} wissel${numSubs !== 1 ? 's' : ''}</span>`
       : '<span style="color:#aaa;font-size:.75rem">Geen wissels</span>';
     el.innerHTML = `
-      <strong>vs ${match.opponent}</strong><br>
-      ${new Date(match.date + 'T00:00:00').toLocaleDateString('nl-NL')}<br>
       <span style="color:#666">${numPresent} aanwezig / ${numPositions} posities · ${FIELD_TYPE_LABEL[match.fieldType] || 'Halve veld'}</span><br>
       ${subBadge}
     `;
