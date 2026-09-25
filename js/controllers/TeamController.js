@@ -54,18 +54,22 @@ const TeamController = (() => {
   async function _onChange(e) {
     const select = e.target;
     if (select.value === NEW_TEAM_VALUE) {
-      const name = prompt('Naam van het nieuwe team:');
       select.value = localStorage.getItem('vc_team_id');
-      if (!name?.trim()) return;
-      try {
-        const team = await TeamModel.create(name.trim());
-        _switchTo(team.id);
-      } catch (err) {
-        alert(err.message);
-      }
+      await createTeam();
       return;
     }
     _switchTo(select.value);
+  }
+
+  async function createTeam() {
+    const name = prompt('Naam van het nieuwe team:');
+    if (!name?.trim()) return;
+    try {
+      const team = await TeamModel.create(name.trim());
+      _switchTo(team.id);
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   function _switchTo(teamId) {
@@ -82,5 +86,64 @@ const TeamController = (() => {
     return d.innerHTML;
   }
 
-  return { init, getActiveTeam };
+  // ── Teams-beheer lightbox (alleen teams die de coach zelf bezit) ────────
+  let _ownedTeamsCache = [];
+
+  async function openTeamsModal() {
+    const err = document.getElementById('teams-modal-error');
+    if (err) err.textContent = '';
+    document.getElementById('teams-modal')?.classList.add('open');
+    await _loadTeamsModalList();
+  }
+
+  function closeTeamsModal() {
+    document.getElementById('teams-modal')?.classList.remove('open');
+  }
+
+  async function _loadTeamsModalList() {
+    const listEl = document.getElementById('teams-modal-list');
+    if (listEl) listEl.innerHTML = '<p style="color:var(--text-muted)">Laden…</p>';
+    try {
+      const teams = await TeamModel.getAll();
+      _ownedTeamsCache = teams.filter(t => t.isOwner);
+      _renderTeamsModalList();
+    } catch (err) {
+      if (listEl) listEl.innerHTML = `<p class="auth-error">${_esc(err.message)}</p>`;
+    }
+  }
+
+  function _renderTeamsModalList() {
+    const listEl = document.getElementById('teams-modal-list');
+    if (!listEl) return;
+    if (!_ownedTeamsCache.length) {
+      listEl.innerHTML = '<p style="color:var(--text-muted)">Geen teams gevonden.</p>';
+      return;
+    }
+    listEl.innerHTML = _ownedTeamsCache.map(t => `
+      <div class="overview-row">
+        <span>${_esc(t.name)}${t.isDefault ? ' <span style="color:var(--text-dim);font-size:.72rem">(standaard)</span>' : ''}</span>
+        <span class="overview-meta">${t.playerCount ?? 0} spelers · ${t.matchCount ?? 0} wedstrijden</span>
+        <button class="table-action-btn" onclick="TeamController.deleteTeam('${t.id}')" title="Verwijderen">🗑</button>
+      </div>`).join('');
+  }
+
+  async function deleteTeam(id) {
+    const team = _ownedTeamsCache.find(t => t.id === id);
+    if (!team) return;
+    if (!confirm(`Team "${team.name}" verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return;
+    const err = document.getElementById('teams-modal-error');
+    if (err) err.textContent = '';
+    try {
+      await TeamModel.remove(id);
+      if (id === localStorage.getItem('vc_team_id')) {
+        location.reload();
+      } else {
+        await _loadTeamsModalList();
+      }
+    } catch (ex) {
+      if (err) err.textContent = ex.message;
+    }
+  }
+
+  return { init, getActiveTeam, createTeam, openTeamsModal, closeTeamsModal, deleteTeam };
 })();

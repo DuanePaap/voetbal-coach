@@ -6,7 +6,11 @@ const { resolveTeamAccess } = require('../middleware/team');
 const router = express.Router();
 
 function parse(row) {
-  return { id: row.id, name: row.name, isDefault: row.is_default, isOwner: row.is_owner };
+  return {
+    id: row.id, name: row.name, isDefault: row.is_default, isOwner: row.is_owner,
+    playerCount: row.player_count != null ? Number(row.player_count) : undefined,
+    matchCount: row.match_count != null ? Number(row.match_count) : undefined,
+  };
 }
 
 function sanitizeEmail(email) {
@@ -21,7 +25,9 @@ function parseCoachRow(row) {
 router.get('/', async (req, res) => {
   try {
     const { rows } = await sql`
-      SELECT t.*, (t.coach_id = ${req.coach.id}) AS is_owner
+      SELECT t.*, (t.coach_id = ${req.coach.id}) AS is_owner,
+        (SELECT COUNT(*) FROM players p WHERE p.team_id = t.id) AS player_count,
+        (SELECT COUNT(*) FROM matches m WHERE m.team_id = t.id) AS match_count
       FROM teams t
       WHERE t.coach_id = ${req.coach.id}
          OR EXISTS (SELECT 1 FROM team_coaches tc WHERE tc.team_id = t.id AND tc.coach_id = ${req.coach.id} AND tc.active)
@@ -66,6 +72,32 @@ router.put('/:id', async (req, res) => {
     res.json(parse(row));
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Server fout' });
+  }
+});
+
+// Alleen de eigenaar mag verwijderen, nooit het laatste team van een coach,
+// en alleen als het team leeg is (geen spelers/wedstrijden) — voorkomt dat
+// voetbaldata onbereikbaar wordt via team_id = NULL (spelers/wedstrijden
+// cascaden bewust niet mee bij het verwijderen van een team).
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rows: [team] } = await sql`SELECT id FROM teams WHERE id = ${req.params.id} AND coach_id = ${req.coach.id}`;
+    if (!team) return res.status(404).json({ error: 'Team niet gevonden' });
+
+    const { rows: ownedTeams } = await sql`SELECT id FROM teams WHERE coach_id = ${req.coach.id}`;
+    if (ownedTeams.length <= 1) return res.status(400).json({ error: 'Je moet minstens één team behouden' });
+
+    const { rows: [{ n: playerCount }] } = await sql`SELECT COUNT(*)::int AS n FROM players WHERE team_id = ${req.params.id}`;
+    const { rows: [{ n: matchCount }] } = await sql`SELECT COUNT(*)::int AS n FROM matches WHERE team_id = ${req.params.id}`;
+    if (playerCount > 0 || matchCount > 0) {
+      return res.status(400).json({ error: 'Verwijder eerst alle spelers en wedstrijden uit dit team' });
+    }
+
+    await sql`DELETE FROM teams WHERE id = ${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete team error:', err);
     res.status(500).json({ error: 'Server fout' });
   }
 });

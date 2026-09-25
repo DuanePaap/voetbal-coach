@@ -363,6 +363,12 @@
       btn.addEventListener('click', () => _applyTheme(btn.dataset.themeChoice));
     });
 
+    // Teams beheer
+    document.getElementById('menu-teams')?.addEventListener('click', () => TeamController.openTeamsModal());
+    document.getElementById('teams-modal-close')?.addEventListener('click', () => TeamController.closeTeamsModal());
+    document.getElementById('teams-modal-backdrop')?.addEventListener('click', () => TeamController.closeTeamsModal());
+    document.getElementById('btn-teams-modal-new')?.addEventListener('click', () => TeamController.createTeam());
+
     // Over Tactix26
     document.getElementById('menu-about')?.addEventListener('click', () => { location.href = '/about'; });
 

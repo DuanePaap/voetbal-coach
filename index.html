@@ -224,6 +224,7 @@
         </button>
         <div class="user-menu" id="user-menu">
           <button class="user-menu-item" id="menu-settings">&#x2699; Instellingen</button>
+          <button class="user-menu-item" id="menu-teams">&#x1F465; Teams</button>
           <button class="user-menu-item nav-btn" data-page="admin" id="nav-btn-admin" style="display:none">&#x1F6E0; Admin</button>
           <button class="user-menu-item" id="btn-player-preview">&#x21C6; Speler weergave</button>
           <button class="user-menu-item" id="menu-about">&#x2139; Over Tactix26</button>
@@ -712,6 +713,20 @@
               <button type="button" class="toggle-btn" data-theme-choice="light">Light</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Teams beheer -->
+      <div class="modal" id="teams-modal">
+        <div class="modal-backdrop" id="teams-modal-backdrop"></div>
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2>Teams</h2>
+            <button class="modal-close" id="teams-modal-close">&times;</button>
+          </div>
+          <p id="teams-modal-error" class="auth-error"></p>
+          <div id="teams-modal-list" class="overview-body"></div>
+          <button type="button" class="btn btn-secondary" id="btn-teams-modal-new" style="width:100%;margin-top:12px;justify-content:center">+ Nieuw team</button>
         </div>
       </div>
 
