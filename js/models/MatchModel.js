@@ -66,6 +66,45 @@ const MatchModel = (() => {
     return save({ ...m, lineup: _mergeAdjacentSlots(lineup) });
   }
 
+  // Plaats een speler (van de bank, of verplaatst vanaf een andere positie als
+  // `fromPosIndex` is meegegeven) in een LEGE positie, scoped aan het wisselmoment-
+  // segment van `minute` — dus ook bruikbaar vóórdat er ooit een opstelling
+  // gegenereerd is (dan staat iedereen nog "op de bank" en is elk vak leeg).
+  // Anders dan swapLineupPlayers vereist dit geen bestaande bezetter op het doelvak.
+  async function placePlayerAtPosition(matchId, playerId, toPosIndex, minute, fromPosIndex) {
+    const m = await getById(matchId);
+    if (!m) return null;
+    const formation = FormationModel.getFormation(m.fieldType, m.formation);
+    if (!formation) return null;
+
+    const bounds = _segmentBounds(m);
+    let segStart = bounds[0], segEnd = bounds[bounds.length - 1];
+    for (let i = 0; i < bounds.length - 1; i++) {
+      if (minute >= bounds[i] && minute < bounds[i + 1]) { segStart = bounds[i]; segEnd = bounds[i + 1]; break; }
+    }
+
+    let lineup = (m.lineup || []).map(l => ({ ...l }));
+    const splitAt = (boundary) => {
+      lineup = lineup.flatMap(l => (l.startMinute < boundary && l.endMinute > boundary)
+        ? [{ ...l, endMinute: boundary }, { ...l, startMinute: boundary }]
+        : [l]);
+    };
+    splitAt(segStart);
+    splitAt(segEnd);
+
+    // Vacate de herkomstpositie voor dit segment (bij een verplaatsing vanaf het veld)
+    if (fromPosIndex != null) {
+      lineup = lineup.filter(l => !(l.positionIndex === fromPosIndex && l.startMinute === segStart && l.endMinute === segEnd && l.playerId === playerId));
+    }
+    // Defensief: een eventueel bestaand (leeg horend) slot op het doel overschrijven
+    lineup = lineup.filter(l => !(l.positionIndex === toPosIndex && l.startMinute === segStart && l.endMinute === segEnd));
+
+    const positionCode = formation.positions[toPosIndex]?.code || '?';
+    lineup.push({ playerId, positionCode, positionIndex: toPosIndex, startMinute: segStart, endMinute: segEnd });
+
+    return save({ ...m, lineup: _mergeAdjacentSlots(lineup) });
+  }
+
   // Re-join slots that ended up back-to-back with the same player + position after a
   // swap, so the lineup array doesn't fragment into ever-smaller pieces over time.
   function _mergeAdjacentSlots(lineup) {
@@ -404,5 +443,5 @@ const MatchModel = (() => {
     return save({ ...match, lineup, substitutions, segmentPins: _pinsToArray(pins) });
   }
 
-  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, saveSegmentPins, swapLineupPlayers, getShareLink };
+  return { getAll, getById, save, remove, saveLineup, toggleNoSub, savePositionOverride, clearPositionOverrides, generateLineup, getSegmentInfo, applySegmentGrid, saveSegmentPins, swapLineupPlayers, placePlayerAtPosition, getShareLink };
 })();

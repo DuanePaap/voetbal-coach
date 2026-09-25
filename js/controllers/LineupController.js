@@ -195,16 +195,18 @@ const LineupController = (() => {
     if (_selected.kind === 'field') {
       const prev = _selected.posIndex;
       _selected = null;
-      MatchModel.swapLineupPlayers(_currentMatchId, prev, posIndex, _currentMinute)
-        .then(() => _renderAll())
-        .catch(console.error);
+      if (!playerId) {
+        _moveFieldToEmpty(prev, posIndex);
+      } else {
+        MatchModel.swapLineupPlayers(_currentMatchId, prev, posIndex, _currentMinute)
+          .then(() => _renderAll())
+          .catch(console.error);
+      }
       return;
     }
-    // Een wisselspeler was geselecteerd — wissel hem met deze veldspeler.
+    // Een wisselspeler was geselecteerd — plaats 'm op dit veldvak.
     if (!playerId) {
-      _selected = null;
-      _renderField();
-      _renderFieldBench();
+      _placeBenchAtEmpty(_selected.playerId, posIndex);
       return;
     }
     _swapBenchField(_selected.playerId, playerId);
@@ -252,6 +254,36 @@ const LineupController = (() => {
     fresh.grid[segIdx].add(benchId);
     const result = await MatchModel.applySegmentGrid(_currentMatchId, fresh, fresh.grid, fresh.pins);
     if (!result) alert('Kon de wissel niet doorvoeren.');
+    await _renderAll();
+  }
+
+  // Plaats een wisselspeler in een LEEG veldvak — anders dan _swapBenchField hoeft
+  // er niemand al op die plek te staan, dus dit werkt ook vóór er ooit een
+  // opstelling gegenereerd is (dan staat iedereen nog op de bank).
+  async function _placeBenchAtEmpty(benchId, posIndex) {
+    const segIdx = _segmentIndexForMinute();
+    _selected = null;
+    if (!_canSwapBench(benchId, segIdx)) {
+      _renderField();
+      _renderFieldBench();
+      return;
+    }
+    const result = await MatchModel.placePlayerAtPosition(_currentMatchId, benchId, posIndex, _currentMinute);
+    if (!result) alert('Kon de speler niet plaatsen.');
+    await _renderAll();
+  }
+
+  // Verplaats een speler die al op het veld staat naar een LEEG vak.
+  async function _moveFieldToEmpty(fromPosIndex, toPosIndex) {
+    const fieldPlayerId = (_currentPositions || []).find(p => p.positionIndex === fromPosIndex)?.playerId;
+    if (!fieldPlayerId) { await _renderAll(); return; }
+    const segIdx = _segmentIndexForMinute();
+    if (!_canSwapField(fieldPlayerId, segIdx)) {
+      await _renderAll();
+      return;
+    }
+    const result = await MatchModel.placePlayerAtPosition(_currentMatchId, fieldPlayerId, toPosIndex, _currentMinute, fromPosIndex);
+    if (!result) alert('Kon de speler niet verplaatsen.');
     await _renderAll();
   }
 
