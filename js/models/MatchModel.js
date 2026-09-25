@@ -145,16 +145,68 @@ const MatchModel = (() => {
   // generateLineup (auto fair rotation) and applySegmentGrid (manual matrix edits) —
   // continuing players simply extend their slot, leaving/entering players are paired
   // by best positional fit so the vacated position + color stays put.
-  function _buildFromSegments(noSubPresent, segmentsOnField, positions, segmentBounds) {
+  //
+  // `existingLineup` (optional) is the match's CURRENT lineup before this edit. When
+  // given, segment 0 is treated the same way as every later segment — only players
+  // who actually left/entered get a new position assigned, everyone else keeps their
+  // exact spot. Without it (fresh generateLineup(), no prior lineup to preserve),
+  // segment 0 falls back to a full best-fit assignment from scratch.
+  function _buildFromSegments(noSubPresent, segmentsOnField, positions, segmentBounds, existingLineup) {
     const numSegments = segmentsOnField.length;
     const lineupMap = {};
     const currentPos = {}; // playerId -> { code, index }
-    const initialAssignment = assignPlayers([...noSubPresent, ...segmentsOnField[0]], positions);
-    initialAssignment.forEach(({ player, pos }) => {
-      const positionIndex = positions.indexOf(pos);
-      currentPos[player.id] = { code: pos.code, index: positionIndex };
-      lineupMap[player.id] = [{ startMinute: segmentBounds[0], endMinute: segmentBounds[1], positionCode: pos.code, positionIndex }];
-    });
+    const seg0Start = segmentBounds[0], seg0End = segmentBounds[1];
+    const seg0Present = [...noSubPresent, ...segmentsOnField[0]];
+
+    if (existingLineup) {
+      const prevSeg0Ids = new Set(
+        existingLineup
+          .filter(l => l.startMinute <= seg0Start && l.endMinute >= seg0End)
+          .map(l => l.playerId)
+      );
+      const continuing = seg0Present.filter(p => prevSeg0Ids.has(p.id));
+      const entering = seg0Present.filter(p => !prevSeg0Ids.has(p.id));
+
+      continuing.forEach(p => {
+        const slot = existingLineup.find(l => l.playerId === p.id && l.startMinute <= seg0Start && l.endMinute >= seg0End);
+        currentPos[p.id] = { code: slot.positionCode, index: slot.positionIndex };
+        lineupMap[p.id] = [{ startMinute: seg0Start, endMinute: seg0End, positionCode: slot.positionCode, positionIndex: slot.positionIndex }];
+      });
+
+      const seg0Ids = new Set(seg0Present.map(p => p.id));
+      const leavingIds = [...prevSeg0Ids].filter(id => !seg0Ids.has(id));
+      const enteringPool = [...entering];
+      leavingIds.forEach(outId => {
+        const outSlot = existingLineup.find(l => l.playerId === outId && l.startMinute <= seg0Start && l.endMinute >= seg0End);
+        if (!outSlot || !enteringPool.length) return;
+        let bestIdx = 0, bestScore = -Infinity;
+        enteringPool.forEach((p, idx) => {
+          const sc = score(p, outSlot.positionCode);
+          if (sc > bestScore) { bestScore = sc; bestIdx = idx; }
+        });
+        const playerIn = enteringPool.splice(bestIdx, 1)[0];
+        currentPos[playerIn.id] = { code: outSlot.positionCode, index: outSlot.positionIndex };
+        lineupMap[playerIn.id] = [{ startMinute: seg0Start, endMinute: seg0End, positionCode: outSlot.positionCode, positionIndex: outSlot.positionIndex }];
+      });
+
+      // Restjes (bijv. eerste keer dat dit blok gevuld wordt) best-fit op de nog vrije posities
+      if (enteringPool.length) {
+        const usedIndexes = new Set(Object.values(currentPos).map(cp => cp.index));
+        const freePositions = positions.filter((_, i) => !usedIndexes.has(i));
+        assignPlayers(enteringPool, freePositions).forEach(({ player, pos }) => {
+          const positionIndex = positions.indexOf(pos);
+          currentPos[player.id] = { code: pos.code, index: positionIndex };
+          lineupMap[player.id] = [{ startMinute: seg0Start, endMinute: seg0End, positionCode: pos.code, positionIndex }];
+        });
+      }
+    } else {
+      const initialAssignment = assignPlayers(seg0Present, positions);
+      initialAssignment.forEach(({ player, pos }) => {
+        const positionIndex = positions.indexOf(pos);
+        currentPos[player.id] = { code: pos.code, index: positionIndex };
+        lineupMap[player.id] = [{ startMinute: seg0Start, endMinute: seg0End, positionCode: pos.code, positionIndex }];
+      });
+    }
 
     const substitutions = [];
 
@@ -347,7 +399,7 @@ const MatchModel = (() => {
     // Every segment must fill exactly the number of positions on the field — the UI
     // already disables "Toepassen" otherwise, this is a defensive backstop.
     if (segmentsOnField.some(onField => noSubPresent.length + onField.length !== formation.positions.length)) return null;
-    const { lineup, substitutions } = _buildFromSegments(noSubPresent, segmentsOnField, formation.positions, bounds);
+    const { lineup, substitutions } = _buildFromSegments(noSubPresent, segmentsOnField, formation.positions, bounds, match.lineup);
 
     return save({ ...match, lineup, substitutions, segmentPins: _pinsToArray(pins) });
   }
